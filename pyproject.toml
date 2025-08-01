@@ -5,7 +5,7 @@ description = "Python project template"
 authors = [
     {name = "Cliff Wulfman", email = "cwulfman@princeton.edu"},
 ]
-dependencies = []
+dependencies = ["lxml>=6.0.0"]
 requires-python = ">=3.12"
 readme = "README.md"
 license = {text = "MIT"}
