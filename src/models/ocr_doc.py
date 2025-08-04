@@ -27,30 +27,40 @@ class OCRDoc:
 
     @property
     def pages(self):
-        return self.root.xpath("//html:span[@class='ocr_page']", namespaces=ocr_namespaces)
+        return [OCRPage(obj) for obj in
+                self.root.xpath(".//html:div[@class='ocr_page']",
+                                namespaces=ocr_namespaces)]
 
 
     @property
     def blocks(self):
-        return self.root.xpath("//html:span[@class='ocrx_block']", namespaces=ocr_namespaces)
-
-        
+        return [OCRBlock(obj) for obj in
+                self.root.xpath(".//html:div[@class='ocrx_block']",
+                                namespaces=ocr_namespaces)]
+   
 
     @property
     def paragraphs(self):
-        return self.root.xpath("//html:span[@class='ocr_par']", namespaces=ocr_namespaces)
+        return [OCRParagraph(obj) for obj in
+                self.root.xpath(".//html:p[@class='ocr_par']",
+                                namespaces=ocr_namespaces)]
 
         
 
     @property
     def lines(self):
-        return self.root.xpath("//html:span[@class='ocr_line']", namespaces=ocr_namespaces)
+        return [OCRLine(obj) for obj in 
+                self.root.xpath(".//html:span[@class='ocr_line']",
+                                namespaces=ocr_namespaces)]
         
 
     @property
     def words(self):
-        return self.root.xpath("//html:span[@class='ocrx_word']", namespaces=ocr_namespaces)
+        return [OCRWord(obj) for obj in
+                self.root.xpath(".//html:span[@class='ocrx_word']",
+                                namespaces=ocr_namespaces)]
         
+
 
 
 class OCRPage(OCRDoc):
@@ -58,25 +68,51 @@ class OCRPage(OCRDoc):
         super().__init__(root)
 
 
+    @property
+    def text(self) -> str:
+        blocks = '\n\n'.join(b.text for b in self.blocks)
+        return f"<div>\n{blocks}\n</div>"
+
+
 class OCRBlock(OCRDoc):
     def __init__(self, root):
         super().__init__(root)
+
+    @property
+    def text(self) -> str:
+        paragraphs = '\n'.join(p.text for p in self.paragraphs)
+        return f"<div>{paragraphs}</div>"
 
 
 class OCRParagraph(OCRDoc):
     def __init__(self, root):
         super().__init__(root)
 
-
+    @property
+    def text(self) -> str:
+        lines = '\n'.join(line.text for line in self.lines)
+        return f"<p>{lines}</p>"
 
 
 class OCRLine(OCRDoc):
     def __init__(self, root):
         super().__init__(root)
 
+    @property
+    def text(self) -> str:
+        return ''.join(w.text for w in self.words)
+
 
 
 class OCRWord(OCRDoc):
     def __init__(self, root):
         super().__init__(root)
+
+
+    @property
+    def text(self) -> str:
+        text = self.root.text
+        if self.root.tail:
+            text += self.root.tail
+        return text
 

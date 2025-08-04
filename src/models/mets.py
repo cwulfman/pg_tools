@@ -5,7 +5,7 @@
 from pathlib import Path
 import re
 from lxml import etree
-from models.ocr_doc import OCRPage
+from models.ocr_doc import OCRPage, OCRBlock, OCRLine, OCRWord
 
 
 namespaces = {
@@ -58,12 +58,6 @@ class Page(Mets):
             self._html = etree.XML(data)
         return self._html
 
-
-    # @property
-    # def blocks(self):
-    #     return blocks(self._html.getroot())
-        
-
     def file_by_use(self, use):
         files = [self.file(id) for id in self.fileids]
         file_element = [f for f in files if use in self.fileuse(f)][0]
@@ -96,7 +90,15 @@ class Page(Mets):
         if orders:
             return int(orders[0])
 
-
+    @property
+    def text(self) -> str:
+        page = ""
+        
+        page += f"<pb n='{self.directory.stem}.{self.coordOCR_file.stem}' />\n"
+        if self.logical_order:
+            page += f"<cb n='{self.logical_order}' />\n"
+        page += self.doc.text
+        return page
 
 
 class Volume(Mets):
@@ -132,5 +134,7 @@ class Volume(Mets):
     @property
     def xml(self):
         if self._xml is None:
-            pass
+            self._xml = '<?xml version="1.0" encoding="UTF-8"?>'
+            for page in self.pages:
+                self._xml += f"\n{page.text}"
         return self._xml
