@@ -15,11 +15,11 @@ namespaces = {
     }
 
 def fix_entities(xml_string:str) -> str:
-    # Replace bad entities (example: replace &shy; with actual soft hyphen)
-    xml_string = xml_string.replace("&shy;", "\u00AD")
     # Remove XML declaration to avoid ValueError
     xml_string = re.sub(r'<\?xml.*?\?>', '', xml_string, flags=re.DOTALL)
-    
+    # Replace bad entities (example: replace &shy; with actual soft hyphen)
+    xml_string = xml_string.replace("&shy;", "\u00AD")
+    xml_string = xml_string.replace("&", "&amp;")
     return xml_string
 
 class Mets:
@@ -55,7 +55,8 @@ class Page(Mets):
                 file_content = f.read()
             data = fix_entities(file_content)
             # self._html = etree.parse(data)
-            self._html = etree.XML(data)
+            if len(data) > 1:
+                self._html = etree.XML(data)
         return self._html
 
     def file_by_use(self, use):
@@ -88,15 +89,15 @@ class Page(Mets):
     def logical_order(self):
         orders = self.root.xpath("@ORDERLABEL", namespaces=namespaces)
         if orders:
-            return int(orders[0])
+            return orders[0]
 
     @property
     def text(self) -> str:
         page = ""
         
-        page += f"<pb n='{self.directory.stem}.{self.coordOCR_file.stem}' />\n"
+        page += f"<pb n='{self.physical_order}' facs='njp_{self.directory.stem}_{self.coordOCR_file.stem}'/>\n"
         if self.logical_order:
-            page += f"<cb n='{self.logical_order}' />\n"
+            page += f"<cb n='{self.logical_order}'/>\n"
         page += self.doc.text
         return page
 
@@ -134,7 +135,9 @@ class Volume(Mets):
     @property
     def xml(self):
         if self._xml is None:
-            self._xml = '<?xml version="1.0" encoding="UTF-8"?>'
+            self._xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+            self._xml += '<text>\n'
             for page in self.pages:
                 self._xml += f"\n{page.text}"
+            self._xml += "\n</text>"
         return self._xml

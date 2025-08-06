@@ -34,9 +34,12 @@ class OCRDoc:
 
     @property
     def blocks(self):
-        return [OCRBlock(obj) for obj in
-                self.root.xpath(".//html:div[@class='ocrx_block']",
-                                namespaces=ocr_namespaces)]
+        result = []
+        if self.root is not None:
+            result = [OCRBlock(obj) for obj in
+                      self.root.xpath(".//html:div[@class='ocrx_block']",
+                                      namespaces=ocr_namespaces)]
+        return result
    
 
     @property
@@ -112,6 +115,8 @@ class OCRWord(OCRDoc):
     @property
     def text(self) -> str:
         text = self.root.text
+        text = text.replace("<", "&lt;")        
+        text = text.replace(">", "&gt;")        
         if self.root.tail:
             text += self.root.tail
         return text
