@@ -154,7 +154,6 @@ class Par(Span):
         p = '\n'
         for o in self.objects:
             p = p + str(o)
-        p += '\n'
         return p
 
 
@@ -165,6 +164,28 @@ class Line(Span):
             p = p + str(o)
         p += '\n'
         return p
+
+
+    @property
+    def starts_greek(self) -> bool:
+        line_length = len(self.objects)
+        percent = percent_greek(self.objects[0:int(line_length / 2)])
+        return percent > .5
+
+
+    @property
+    def ends_greek(self) -> bool:
+        line_length = len(self.objects)
+        percent = percent_greek(self.objects[int(line_length / 2):])
+        return percent > .5
+
+                   
+
+    @property
+    def is_merged(self) -> bool:
+        condition1 = self.starts_greek and not(self.ends_greek)
+        condition2 = not(self.starts_greek) and self.ends_greek
+        return any([condition1, condition2])
 
 
 
@@ -187,3 +208,12 @@ def genObject(element:etree.Element):
 
         case _:
             return None
+
+def percent_greek(tok_list):
+    tok_count = 0
+    greek_count = 0
+    for tok in tok_list:
+        tok_count +=1
+        if tok.is_greek():
+            greek_count += 1
+    return greek_count / tok_count
