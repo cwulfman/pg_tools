@@ -24,6 +24,9 @@ class Token:
     def __repr__(self) -> str:
         return f"Token({self.text!r})"
 
+    def __str__(self) -> str:
+        return self.text_with_ws
+
     @property
     def text_with_ws(self) -> str:
         if self.tail:
@@ -66,30 +69,67 @@ class Span:
         self.type:str = element.get('class')
         self._element:etree.Element = element
         self.objects = []
-        for child in element:
-            obj = genObject(child)
-        self.objects = [genObject(child) for child in element]
+        self.objects = [genObject(child) for child in element if child.get('class') is not None]
 
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
 
 
+    @property
     def tokens(self):
         token_list = []
         for obj in self.objects:
             if obj.__class__ is Token:
                 token_list.append(obj)
             else:
-                token_list = token_list + obj.tokens()
+                token_list = token_list + obj.tokens
         return token_list
+
+    @property
+    def lines(self):
+        line_list = []
+        if self.type == 'ocr_line':
+            line_list.append(self)
+        else:
+            for o in self.objects:
+                line_list = line_list + o.lines
+        return line_list
+
+    @property
+    def percent_greek(self) -> float:
+        tokens = self.tokens
+        greek_count = 0
+        tok_count = len(tokens)
+        greek_count = len([tok for tok in tokens if tok.is_greek()])
+        return (greek_count / tok_count)
+
+    def is_greek(self, threshold: float = 0.7) -> bool:
+        greek_count = 0
+        obj_count = 0
+        for obj in self.objects:
+            
+           obj_count +=1
+           if obj.is_greek(threshold):
+                greek_count += 1
+                
+        return (greek_count / obj_count) >= threshold
+
+
             
 
 class Page(Span):
-    pass
+
+    @property
+    def blocks(self):
+        return [o for o in self.objects if o.type == 'ocrx_block']
 
 
 class Block(Span):
-    pass
+
+    @property
+    def pars(self):
+        return [o for o in self.objects if o.type == 'ocr_par']
+
 
 
 class Par(Span):
@@ -121,4 +161,4 @@ def genObject(element:etree.Element):
             return Par(element)
 
         case _:
-            return Span(element)
+            return None
