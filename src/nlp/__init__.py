@@ -74,6 +74,9 @@ class Span:
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
 
+    def __str__(self):
+        return ' '.join([tok.text for tok in self.tokens])
+
 
     @property
     def tokens(self):
@@ -119,12 +122,26 @@ class Span:
 
 class Page(Span):
 
+    def __str__(self):
+        page = ''
+        for o in self.objects:
+            page += str(o)
+        return page
+
     @property
     def blocks(self):
         return [o for o in self.objects if o.type == 'ocrx_block']
 
 
 class Block(Span):
+
+    def __str__(self):
+        block = '<ab>'
+        for o in self.objects:
+            block += str(o)
+        block += '</ab>\n'
+        return block
+    
 
     @property
     def pars(self):
@@ -133,14 +150,22 @@ class Block(Span):
 
 
 class Par(Span):
-    pass
+    def __str__(self):
+        p = '\n'
+        for o in self.objects:
+            p = p + str(o)
+        p += '\n'
+        return p
 
 
 class Line(Span):
-    def __init__(self, element:etree.Element) -> None:
-        super().__init__(element)
-        # self.objects = [genObject(child) for child in element]
-        
+    def __str__(self):
+        p = ''
+        for o in self.objects:
+            p = p + str(o)
+        p += '\n'
+        return p
+
 
 
 def genObject(element:etree.Element):
