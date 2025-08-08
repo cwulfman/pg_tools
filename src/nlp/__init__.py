@@ -1,4 +1,5 @@
 import unicodedata
+from copy import deepcopy
 from collections import namedtuple
 from lxml import etree
 
@@ -19,7 +20,7 @@ class Token:
     def __init__(self, element:etree.Element) -> None:
         self.text = element.text
         self.tail = element.tail
-        self.bbox = BBox(*w1.get('title').split(';')[0].split(' ')[1:])
+        self.bbox = BBox(*element.get('title').split(';')[0].split(' ')[1:])
 
     def __repr__(self) -> str:
         return f"Token({self.text!r})"
@@ -63,11 +64,12 @@ class Token:
 
 
 
-
 class Span:
     def __init__(self, element:etree.Element):
+        self.element = element
         self.type:str = element.get('class')
         self._element:etree.Element = element
+        self.bbox = BBox(*element.get('title').split(';')[0].split(' ')[1:])        
         self.objects = []
         self.objects = [genObject(child) for child in element if child.get('class') is not None]
 
@@ -217,3 +219,28 @@ def percent_greek(tok_list):
         if tok.is_greek():
             greek_count += 1
     return greek_count / tok_count
+
+
+def split_line_from_left(line):
+    """returns two new line objects."""
+
+    # calculate the middle
+    idx = 1
+    tokens = line.objects
+    v = tokens[0:idx]
+    while (percent_greek(v) > 0.9):
+        idx += 1
+        v = tokens[0:idx]
+
+    mid = idx-1
+    
+    left_line = deepcopy(line)
+    left_line.objects = left_line.objects[0:mid]
+    
+    right_line = deepcopy(line)
+    right_line.objects = right_line.objects[mid:len(right_line.objects)]
+
+    # left_string = tokens[0:idx-1]
+    # right_string = tokens[idx-1:len(tokens)]
+    # return left_string,right_string
+    return left_line,right_line
