@@ -1,16 +1,50 @@
 import unicodedata
 from copy import deepcopy
-from collections import namedtuple
 from lxml import etree
+from dataclasses import dataclass
+from typing import Iterator
+
+@dataclass(frozen=True)
+class BBox:
+    x_min: int
+    y_min: int
+    x_max: int
+    y_max: int
+
+    @property
+    def width(self) -> int:
+        return self.x_max - self.x_min
+
+    @property
+    def height(self) -> int:
+        return self.y_max - self.y_min
+
+    def to_xywh(self) -> tuple[int, int, int, int]:
+        """Return (x, y, width, height) tuple."""
+        return (self.x_min, self.y_min, self.width, self.height)
+
+    # --- Drop-in tuple-like behavior ---
+    def __iter__(self) -> Iterator[int]:
+        yield self.x_min
+        yield self.y_min
+        yield self.x_max
+        yield self.y_max
+
+    def __getitem__(self, index: int) -> int:
+        return (self.x_min, self.y_min, self.x_max, self.y_max)[index]
+
+    def __len__(self) -> int:
+        return 4
 
 
-BBox = namedtuple('BBox', ['x', 'y', 'w', 'h'])
 
 class Token:
     def __init__(self, element:etree.Element) -> None:
         self.text = element.text
         self.tail = element.tail
-        self.bbox = BBox(*element.get('title').split(';')[0].split(' ')[1:])
+        bbox_string = element.get('title').split(';')[0].split(' ')[1:]
+        values = [int(v) for v in bbox_string]
+        self.bbox = BBox(*values)
 
     def __repr__(self) -> str:
         return f"Token({self.text!r})"
@@ -59,8 +93,9 @@ class Span:
         self.element = element
         self.type:str = element.get('class')
         self._element:etree.Element = element
-        self.bbox = BBox(*element.get('title').split(';')[0].split(' ')[1:])        
-        self.objects = []
+        bbox_string = element.get('title').split(';')[0].split(' ')[1:]
+        values = [int(v) for v in bbox_string]
+        self.bbox = BBox(*values)
         self.objects = [genObject(child) for child in element if child.get('class') is not None]
 
     def __repr__(self):
@@ -69,6 +104,18 @@ class Span:
     def __str__(self):
         return ' '.join([tok.text for tok in self.tokens])
 
+
+    @property
+    def width(self):
+        return self.bbox.width
+
+    @property
+    def left(self):
+        return self.bbox.x_min
+
+    @property
+    def right(self):
+        return self.bbox.x_max
 
     @property
     def tokens(self):
@@ -111,13 +158,13 @@ class Span:
         if len(words) == 0:
             return False
         else:
-            greek_words = [word for word in words if word.is_greek]
+            greek_words = [word for word in words if word.is_greek(threshold)]
             return (len(greek_words) / len(words)) >= threshold
 
 
     def is_greek_old(self, threshold: float = 0.7) -> bool:
         if len(self.objects) == 0:
-            return 0
+            return False
         else:
             greek_count = 0
             obj_count = 0
@@ -143,6 +190,8 @@ class Page(Span):
     @property
     def blocks(self):
         return [o for o in self.objects if o.type == 'ocrx_block']
+
+
 
 
 class Block(Span):
@@ -201,6 +250,22 @@ class Line(Span):
 
 
 
+class Column:
+    def __init__(self, blocks):
+        self.blocks = blocks
+
+    def __str__(self):
+        return '\n'.join([str(b) for b in self.blocks])
+        
+
+
+    def is_greek(self, threshold = .5):
+        if len(self.blocks) == 0:
+            return False
+        else:
+            greek_blocks = [b for b in self.blocks if b.is_greek()]
+            return (len(greek_blocks) / len(self.blocks)) >= threshold
+
 
 
 
@@ -208,7 +273,7 @@ def genObject(element:etree.Element):
     match element.get('class'):
         case 'ocr_page':
             return Page(element)
-
+        
         case 'ocrx_block':
             return Block(element)
 
@@ -235,7 +300,7 @@ def percent_greek(tok_list):
             if tok.is_greek():
                 greek_count += 1
         return greek_count / tok_count
-            
+
 
 def split_line_from_left(line):
     """returns two new line objects."""
@@ -249,10 +314,10 @@ def split_line_from_left(line):
         v = tokens[0:idx]
 
     mid = idx-1
-    
+
     left_line = deepcopy(line)
     left_line.objects = left_line.objects[0:mid]
-    
+
     right_line = deepcopy(line)
     right_line.objects = right_line.objects[mid:len(right_line.objects)]
 
@@ -272,10 +337,10 @@ def split_line_from_right(line):
             next
         if tok.is_greek():
             break
-    
+
     left_line = deepcopy(line)
     left_line.objects = left_line.objects[0:mid]
-    
+
     right_line = deepcopy(line)
     right_line.objects = right_line.objects[mid:len(right_line.objects)]
     return left_line,right_line
@@ -286,3 +351,10 @@ def split_line(line):
     else:
         latin,greek = split_line_from_right(line)
     return greek,latin
+
+def right_column(page, padding=40):
+    mid = page.width / 2
+    return Column([b for b in page.blocks if b.left > mid - padding])
+
+def left_column(page, padding=40):
+    return Column([b for b in page.blocks if b.left - page.left < 100])
