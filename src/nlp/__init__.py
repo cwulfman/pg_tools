@@ -81,6 +81,11 @@ class Span:
         return token_list
 
     @property
+    def words(self):
+        tokens = self.tokens
+        return [tok for tok in tokens if not(tok.is_punct)]
+    
+    @property
     def lines(self):
         line_list = []
         if self.type == 'ocr_line':
@@ -92,22 +97,37 @@ class Span:
 
     @property
     def percent_greek(self) -> float:
-        tokens = self.tokens
-        greek_count = 0
-        tok_count = len(tokens)
-        greek_count = len([tok for tok in tokens if tok.is_greek()])
-        return (greek_count / tok_count)
+        words = self.words
+        if len(words) == 0:
+            return 0
+        else:
+            greek_count = 0
+            tok_count = len(words)
+            greek_count = len([word for word in words if word.is_greek()])
+            return (greek_count / tok_count)
 
     def is_greek(self, threshold: float = 0.7) -> bool:
-        greek_count = 0
-        obj_count = 0
-        for obj in self.objects:
-            
-           obj_count +=1
-           if obj.is_greek(threshold):
-                greek_count += 1
+        words = self.words
+        if len(words) == 0:
+            return False
+        else:
+            greek_words = [word for word in words if word.is_greek]
+            return (len(greek_words) / len(words)) >= threshold
+
+
+    def is_greek_old(self, threshold: float = 0.7) -> bool:
+        if len(self.objects) == 0:
+            return 0
+        else:
+            greek_count = 0
+            obj_count = 0
+            for obj in self.objects:
                 
-        return (greek_count / obj_count) >= threshold
+                obj_count +=1
+                if obj.is_greek(threshold):
+                    greek_count += 1
+                    
+            return (greek_count / obj_count) >= threshold
 
 
             
@@ -160,15 +180,15 @@ class Line(Span):
 
     @property
     def starts_greek(self) -> bool:
-        line_length = len(self.objects)
-        percent = percent_greek(self.objects[0:int(line_length / 2)])
+        line_length = len(self.words)
+        percent = percent_greek(self.words[0:int(line_length / 2)])
         return percent > .5
 
 
     @property
     def ends_greek(self) -> bool:
-        line_length = len(self.objects)
-        percent = percent_greek(self.objects[int(line_length / 2):])
+        line_length = len(self.words)
+        percent = percent_greek(self.words[int(line_length / 2):])
         return percent > .5
 
                    
@@ -205,14 +225,17 @@ def genObject(element:etree.Element):
             return None
 
 def percent_greek(tok_list):
-    tok_count = 0
-    greek_count = 0
-    for tok in tok_list:
-        tok_count +=1
-        if tok.is_greek():
-            greek_count += 1
-    return greek_count / tok_count
-
+    if len(tok_list) == 0:
+        return 0
+    else:
+        tok_count = 0
+        greek_count = 0
+        for tok in tok_list:
+            tok_count +=1
+            if tok.is_greek():
+                greek_count += 1
+        return greek_count / tok_count
+            
 
 def split_line_from_left(line):
     """returns two new line objects."""
@@ -237,3 +260,29 @@ def split_line_from_left(line):
     # right_string = tokens[idx-1:len(tokens)]
     # return left_string,right_string
     return left_line,right_line
+
+
+def split_line_from_right(line):
+    """returns two new line objects."""
+    # calculate the middle
+
+
+    for mid,tok in enumerate(line.tokens):
+        if tok.is_punct:
+            next
+        if tok.is_greek():
+            break
+    
+    left_line = deepcopy(line)
+    left_line.objects = left_line.objects[0:mid]
+    
+    right_line = deepcopy(line)
+    right_line.objects = right_line.objects[mid:len(right_line.objects)]
+    return left_line,right_line
+
+def split_line(line):
+    if line.starts_greek:
+        greek,latin = split_line_from_left(line)
+    else:
+        latin,greek = split_line_from_right(line)
+    return greek,latin
