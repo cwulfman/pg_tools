@@ -59,5 +59,6 @@ def flatten(a):
 loader = Loader(Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148'))
 loader.load()
 p1 = loader.pages[697]
-cl,cr = nlp.split_columns(p1)
+left_column,right_column = nlp.split_columns(p1)
 ml = nlp.merged_lines(p1)
+fused_line = ml[0]

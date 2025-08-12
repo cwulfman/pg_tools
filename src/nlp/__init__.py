@@ -208,10 +208,22 @@ class Page(Span):
         left_line, right_line = split_line(fused_line)
         left_column, right_column = split_columns(self)
         left_block,left_idx = left_column.line_index(fused_line)
-        left_block.objects[left_idx] = left_line
+
+        target = left_block.objects[left_idx]
+        move_line(left_line, target)
+        if left_idx > len(left_block.objects):
+            left_block.objects.append(left_line)
+        else:
+            left_block.objects[left_idx] = left_line
+
+        breakpoint()
 
         right_block,right_idx = right_column.line_after_index(right_line)
+        target = right_block.objects[right_idx]
+        move_line(right_line,target)
         right_block.objects.insert(right_idx, right_line)
+
+        return left_line, right_line
 
 
     def repair_fused_lines(self):
@@ -303,24 +315,33 @@ class Column:
         self._lines = None
 
     def line_index(self, line):
-        for block in self.blocks:
-            if contains_line(block, line):
-                index_in_block = block.lines.index(line)
-                return block,index_in_block
+        # search the lines in the column
+        # get the index of the line in its parent block
+        idx = line.parent.objects.index(line)
+        return line.parent, idx
+        # for block in self.blocks:
+        #     if contains_line(block, line):
+        #         index_in_block = block.lines.index(line)
+        #         return block,index_in_block
 
     def line_after_index(self,from_line, spacing=10):
         # the top of the next line
         # should be roughly the same
         # as the bottom of the line.
-
         hits = [line for line in self.lines
                 if line.top >= from_line.bottom
                 and line.top <= from_line.bottom + spacing]
+
+        # breakpoint()
+
         if hits:
             next_line = hits[0]
-            next_line_parent = next_line.parent
-            idx = next_line_parent.objects.index(next_line)
-            return next_line_parent,idx
+        else:
+            next_line = self.lines[-1]
+
+        next_line_parent = next_line.parent
+        idx = next_line_parent.objects.index(next_line)
+        return next_line_parent, idx
     
 
 
@@ -379,48 +400,48 @@ def percent_greek(tok_list):
         return greek_count / tok_count
 
 
-def split_line_from_left(line):
-    """returns two new line objects."""
+# def split_line_from_left(line):
+#     """returns two new line objects."""
 
-    # calculate the middle
-    idx = 1
-    tokens = line.objects
-    v = tokens[0:idx]
-    while (percent_greek(v) > 0.9):
-        idx += 1
-        v = tokens[0:idx]
+#     # calculate the middle
+#     idx = 1
+#     tokens = line.objects
+#     v = tokens[0:idx]
+#     while (percent_greek(v) > 0.9):
+#         idx += 1
+#         v = tokens[0:idx]
 
-    mid = idx-1
+#     mid = idx-1
 
-    left_line = deepcopy(line)
-    left_line.objects = left_line.objects[0:mid]
+#     left_line = deepcopy(line)
+#     left_line.objects = left_line.objects[0:mid]
 
-    right_line = deepcopy(line)
-    right_line.objects = right_line.objects[mid:len(right_line.objects)]
+#     right_line = deepcopy(line)
+#     right_line.objects = right_line.objects[mid:len(right_line.objects)]
 
-    # left_string = tokens[0:idx-1]
-    # right_string = tokens[idx-1:len(tokens)]
-    # return left_string,right_string
-    return left_line,right_line
-
-
-def split_line_from_right(line):
-    """returns two new line objects."""
-    # calculate the middle
+#     # left_string = tokens[0:idx-1]
+#     # right_string = tokens[idx-1:len(tokens)]
+#     # return left_string,right_string
+#     return left_line,right_line
 
 
-    for mid,tok in enumerate(line.tokens):
-        if tok.is_punct:
-            next
-        if tok.is_greek():
-            break
+# def split_line_from_right(line):
+#     """returns two new line objects."""
+#     # calculate the middle
 
-    left_line = deepcopy(line)
-    left_line.objects = left_line.objects[0:mid]
 
-    right_line = deepcopy(line)
-    right_line.objects = right_line.objects[mid:len(right_line.objects)]
-    return left_line,right_line
+#     for mid,tok in enumerate(line.tokens):
+#         if tok.is_punct:
+#             next
+#         if tok.is_greek():
+#             break
+
+#     left_line = deepcopy(line)
+#     left_line.objects = left_line.objects[0:mid]
+
+#     right_line = deepcopy(line)
+#     right_line.objects = right_line.objects[mid:len(right_line.objects)]
+#     return left_line,right_line
 
 
 def split_line(line):
@@ -443,18 +464,6 @@ def split_line(line):
 
     return left_line,right_line
         
-
-    
-    
-
-
-def split_line_old(line):
-    if line.starts_greek:
-        left_line,right_line = split_line_from_left(line)
-    else:
-        left_line,right_line = split_line_from_right(line)
-    return left_line,right_line
-
 
 def right_column(page, padding=40):
     mid = page.width / 2
@@ -498,3 +507,20 @@ def contains_line(span, line):
             if (not(child.type) == 'token'):
                 if contains_line(child, line):
                     return child
+
+
+def move_line(new_line, target_line, position="above"):
+    target_bbox = target_line.bbox
+    new_line_bbox = new_line.bbox
+
+    # Construct a new bbox for the new line
+    if position == "above":
+        new_x_min = target_line.bbox.x_min
+        new_x_max = new_line.bbox.x_min + new_line.bbox.width
+        new_y_min = target_line.bbox.y_min - (2 * new_line.bbox.height)
+        new_y_max = new_y_min + new_line_bbox.height
+
+        new_bbox =  BBox(new_x_min, new_y_min, new_x_max, new_y_max)
+        new_line.bbox = new_bbox
+        return new_bbox
+    
