@@ -457,10 +457,13 @@ def split_line(line):
 
     else:
         indexes = [line.objects.index(word) for word in line.words if not(word.is_greek())]
-        latin_span = right_line.objects[indexes[0]:indexes[-1]+1]
-        greek_span = left_line.objects[indexes[-1] + 1:len(left_line.objects)]
-        left_line.objects = latin_span
-        right_line.objecs = greek_span
+        if indexes:
+            latin_span = right_line.objects[indexes[0]:indexes[-1]+1]
+            greek_span = left_line.objects[indexes[-1] + 1:len(left_line.objects)]
+            left_line.objects = latin_span
+            right_line.objecs = greek_span
+        else:
+            breakpoint()
 
     return left_line,right_line
         
