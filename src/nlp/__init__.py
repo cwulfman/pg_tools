@@ -40,11 +40,15 @@ class BBox:
 
 class Token:
     def __init__(self, element:etree.Element) -> None:
+        self.type = 'token'
+        self.element = element
         self.text = element.text
         self.tail = element.tail
         bbox_string = element.get('title').split(';')[0].split(' ')[1:]
         values = [int(v) for v in bbox_string]
         self.bbox = BBox(*values)
+        self.index = None
+        self.parent = None
 
     def __repr__(self) -> str:
         return f"Token({self.text!r})"
@@ -91,12 +95,21 @@ class Token:
 class Span:
     def __init__(self, element:etree.Element):
         self.element = element
+        self.parent = None
+        self.index = 0
         self.type:str = element.get('class')
         self._element:etree.Element = element
         bbox_string = element.get('title').split(';')[0].split(' ')[1:]
         values = [int(v) for v in bbox_string]
         self.bbox = BBox(*values)
-        self.objects = [genObject(child) for child in element if child.get('class') is not None]
+        children = [child for child in element if child.get('class') is not None]
+        self.objects = []
+        for i,child in enumerate(children):
+            object = genObject(child, i)
+            object.parent = self
+            self.objects.append(object)
+        
+        # self.objects = [genObject(child) for child in element if child.get('class') is not None]
 
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
@@ -106,8 +119,20 @@ class Span:
 
 
     @property
+    def top(self):
+        return self.bbox.y_min
+
+    @property
+    def bottom(self):
+        return self.bbox.y_max
+
+    @property
     def width(self):
         return self.bbox.width
+
+    @property
+    def height(self):
+        return self.bbox.height
 
     @property
     def left(self):
@@ -162,19 +187,6 @@ class Span:
             return (len(greek_words) / len(words)) >= threshold
 
 
-    def is_greek_old(self, threshold: float = 0.7) -> bool:
-        if len(self.objects) == 0:
-            return False
-        else:
-            greek_count = 0
-            obj_count = 0
-            for obj in self.objects:
-                
-                obj_count +=1
-                if obj.is_greek(threshold):
-                    greek_count += 1
-                    
-            return (greek_count / obj_count) >= threshold
 
 
             
@@ -192,7 +204,17 @@ class Page(Span):
         return [o for o in self.objects if o.type == 'ocrx_block']
 
 
+    def repair_fused_line(self, fused_line):
+        left_line, right_line = split_line(fused_line)
+        left_column, right_column = split_columns(self)
+        left_block,left_idx = left_column.line_index(fused_line)
+        left_block.objects[left_idx] = left_line
 
+        breakpoint()
+
+        right_block,right_idx = right_column.line_after_index(right_line)
+        right_block.objects.insert(right_idx, right_line)
+        
 
 class Block(Span):
 
@@ -253,10 +275,47 @@ class Line(Span):
 class Column:
     def __init__(self, blocks):
         self.blocks = blocks
+        self._lines = None
 
+    def __repr__(self):
+        return f"<column len={len(self.blocks)}>"
+        
     def __str__(self):
         return '\n'.join([str(b) for b in self.blocks])
-        
+
+    @property
+    def lines(self):
+        if self._lines is None:
+            self._lines = []
+            for o in self.blocks:
+                self._lines = self._lines + o.lines
+        return self._lines
+
+
+    def remove_header(self):
+        self.blocks.pop(0)
+        self._lines = None
+
+    def line_index(self, line):
+        for block in self.blocks:
+            if contains_line(block, line):
+                index_in_block = block.lines.index(line)
+                return block,index_in_block
+
+    def line_after_index(self,from_line, spacing=10):
+        # the top of the next line
+        # should be roughly the same
+        # as the bottom of the line.
+
+        hits = [line for line in self.lines
+                if line.top >= from_line.bottom
+                and line.top <= from_line.bottom + spacing]
+        if hits:
+            next_line = hits[0]
+            next_line_parent = next_line.parent
+            idx = next_line_parent.objects.index(next_line)
+            return next_line_parent,idx
+    
 
 
     def is_greek(self, threshold = .5):
@@ -269,25 +328,37 @@ class Column:
 
 
 
-def genObject(element:etree.Element):
+def genObject(element:etree.Element, index):
     match element.get('class'):
         case 'ocr_page':
-            return Page(element)
-        
+            page:Page = Page(element)
+            page.index = index
+            return page
+
         case 'ocrx_block':
-            return Block(element)
+            block:Block = Block(element)
+            block.index = index
+            return block
 
         case 'ocrx_word':
-            return Token(element)
+            token = Token(element)
+            return token
 
         case 'ocr_line':
-            return Line(element)
+            line = Line(element)
+            line.index = index
+            return line
 
         case 'ocr_par':
-            return Par(element)
+            par = Par(element)
+            par.index = index
+            return par
 
         case _:
             return None
+
+
+        
 
 def percent_greek(tok_list):
     if len(tok_list) == 0:
@@ -347,14 +418,51 @@ def split_line_from_right(line):
 
 def split_line(line):
     if line.starts_greek:
-        greek,latin = split_line_from_left(line)
+        left_line,right_line = split_line_from_left(line)
     else:
-        latin,greek = split_line_from_right(line)
-    return greek,latin
+        left_line,right_line = split_line_from_right(line)
+    return left_line,right_line
+
 
 def right_column(page, padding=40):
     mid = page.width / 2
     return Column([b for b in page.blocks if b.left > mid - padding])
 
 def left_column(page, padding=40):
-    return Column([b for b in page.blocks if b.left - page.left < 100])
+    mid = page.width / 2
+    return Column([b for b in page.blocks if b.left <  mid - padding])
+
+def split_columns(page, padding=40):
+    left = left_column(page, padding)
+    right = right_column(page, padding)
+    return left,right
+
+
+def merged_lines(block):
+    return [line for line in block.lines if line.is_merged]
+
+
+# def next_line_down(from_line, column, spacing=10):
+#     # always in the right column
+#     # the top of the next line should
+#     # be near the bottom of the line
+    
+#     # hits = [line for line in column.lines
+#     #         if from_line.bottom == line.top]
+#     hits = [line for line in column.lines
+#             if line.top >= from_line.bottom
+#             and line.top <= from_line.bottom + spacing]
+    
+#     if hits:
+#         return hits[0]
+
+
+
+def contains_line(span, line):
+    if line in span.objects:
+        return span
+    else:
+        for child in span.objects:
+            if (not(child.type) == 'token'):
+                if contains_line(child, line):
+                    return child
