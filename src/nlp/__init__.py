@@ -210,10 +210,14 @@ class Page(Span):
         left_block,left_idx = left_column.line_index(fused_line)
         left_block.objects[left_idx] = left_line
 
-        breakpoint()
-
         right_block,right_idx = right_column.line_after_index(right_line)
         right_block.objects.insert(right_idx, right_line)
+
+
+    def repair_fused_lines(self):
+        fused_lines = merged_lines(self)
+        for fused_line in fused_lines:
+            self.repair_fused_line(fused_line)
         
 
 class Block(Span):
@@ -269,6 +273,8 @@ class Line(Span):
         condition1 = self.starts_greek and not(self.ends_greek)
         condition2 = not(self.starts_greek) and self.ends_greek
         return any([condition1, condition2])
+
+    
 
 
 
@@ -416,7 +422,33 @@ def split_line_from_right(line):
     right_line.objects = right_line.objects[mid:len(right_line.objects)]
     return left_line,right_line
 
+
 def split_line(line):
+    left_line = deepcopy(line)
+    right_line = deepcopy(line)
+
+    if line.starts_greek:
+        indexes = [line.objects.index(word) for word in line.words if word.is_greek()]
+        greek_span = left_line.objects[indexes[0]:indexes[-1]+1]
+        latin_span = right_line.objects[indexes[-1] + 1:len(left_line.objects)]
+        left_line.objects = greek_span
+        right_line.objects = latin_span
+
+    else:
+        indexes = [line.objects.index(word) for word in line.words if not(word.is_greek())]
+        latin_span = right_line.objects[indexes[0]:indexes[-1]+1]
+        greek_span = left_line.objects[indexes[-1] + 1:len(left_line.objects)]
+        left_line.objects = latin_span
+        right_line.objecs = greek_span
+
+    return left_line,right_line
+        
+
+    
+    
+
+
+def split_line_old(line):
     if line.starts_greek:
         left_line,right_line = split_line_from_left(line)
     else:
