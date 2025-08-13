@@ -1,9 +1,10 @@
-from pathlib import Path
 import unicodedata
 from copy import deepcopy
 from lxml import etree
 from dataclasses import dataclass
 from typing import Iterator
+
+ns = {"xhtml": "http://www.w3.org/1999/xhtml"}
 
 @dataclass(frozen=True)
 class BBox:
@@ -201,8 +202,12 @@ class Page(Span):
 
     def __str__(self):
         page = ''
-        for o in self.objects:
-            page += str(o)
+        if self.columns:
+            page += str(self.columns['left'])
+            page += str(self.columns['right'])
+        else:
+            for o in self.objects:
+                page += str(o)
         return page
 
     @property
@@ -227,8 +232,24 @@ class Page(Span):
     def blocks(self):
         return [o for o in self.objects if o.type == 'ocrx_block']
 
+    @property
+    def header(self):
+        p_elements = self.element.xpath("xhtml:div[@class='ocrx_block']/xhtml:p",
+                           namespaces=ns)
+        if p_elements:
+            return genObject(p_elements[0],0)
+        else:
+            return None
 
-    def serialize(self, dir:Path, **kwargs):
+    @property
+    def header_old(self):
+        header = None
+        if self.lines and self.header:
+            header = self.columns['left'].remove_header()
+        return header
+
+
+    def serialize(self, file_handle):
         
         if self.lines:
             header = self.columns['left'].remove_header()
@@ -237,18 +258,30 @@ class Page(Span):
             header = None
             greek_columns = []
 
-        fname = Path(str(self.number))
-        file_path = dir / fname.with_suffix('.xml')
-        with file_path.open('w+', encoding='utf-8') as f:
-            f.write("<?xml version='1.0' encoding='UTF-8'?>\n")
-            f.write("<text>\n")
-            f.write(f"<pb n='{self.number}'/>\n")
-            if header:
-                f.write(header)
+        if header:
+            running_title_toks = header.tokens[2:]
+            if running_title_toks:
+                running_title = ''.join([tok.text_with_ws for tok in running_title_toks])
+                pbstring = f"<pb n='{self.number}' ed='{running_title}'/>"
+            else:
+                pbstring = f"<pb n='{self.number}' />"
+        else:
+            pbstring = f"<pb n='{self.number}' />"
+
+            file_handle.write(f"{pbstring}\n")
+            
             for column in greek_columns:
-                f.write('<cb/>\n')
-                f.write(str(column))
-            f.write("</text>")
+                if header:
+                    if column == self.columns['left']:
+                        cb_number = header.tokens[0].text
+                    elif column == self.columns['right']:
+                        cb_number = header.tokens[1].text
+                    cb = f"<cb n='{cb_number}' />\n"
+                else:
+                    cb = "<cb/>"
+                file_handle.write(f"{cb}\n")
+                file_handle.write(str(column))
+
 
     def repair_fused_line(self, fused_line):
         left_line, right_line = split_line(fused_line)
@@ -338,15 +371,23 @@ class Line(Span):
 
 
 class Column:
-    def __init__(self, blocks):
+    def __init__(self, blocks, number=None):
         self.blocks = blocks
         self._lines = None
+        self.number = number
 
     def __repr__(self):
-        return f"<column len={len(self.blocks)}>"
+        return f"<column n='{self.number}'>"
         
     def __str__(self):
-        return '\n'.join([str(b) for b in self.blocks])
+        coltext =''
+        if self.number:
+            coltext += f"<cb n='{self.number}'/>\n"
+        else:
+            coltext += "<cb/>\n"
+
+        coltext += '\n'.join([str(b) for b in self.blocks])
+        return coltext
 
     @property
     def lines(self):
@@ -358,8 +399,12 @@ class Column:
 
 
     def remove_header(self):
-        self.blocks.pop(0)
-        self._lines = None
+        if self.blocks:
+            header = self.blocks.pop(0)
+            self._lines = None
+            return header
+        else:
+            return None
 
     def line_index(self, line):
         # search the lines in the column
@@ -525,12 +570,24 @@ def split_line(line):
         
 
 def right_column(page, padding=40):
+    cb_number = None
+    if page.header:
+        try:
+            cb_number = page.header.tokens[1].text
+        except IndexError:
+            cb_number = 0
     mid = page.width / 2
-    return Column([b for b in page.blocks if b.left > mid - padding])
+    return Column([b for b in page.blocks if b.left > mid - padding], cb_number)
 
 def left_column(page, padding=40):
+    cb_number = None
+    if page.header:
+        cb_number = page.header.tokens[0].text
+
     mid = page.width / 2
-    return Column([b for b in page.blocks if b.left <  mid - padding])
+    col = Column([b for b in page.blocks if b.left <  mid - padding], cb_number)
+    _ = col.remove_header()
+    return col
 
 def split_columns(page, padding=40):
     left = left_column(page, padding)

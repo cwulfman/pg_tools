@@ -50,6 +50,36 @@ class Loader:
         self.pages: dict[int,nlp.Page]  = dict()
         self.load()
 
+    def serialize(self, voldir:Path):
+        fname = Path(f"njp_{self.dir.stem}.xml")
+        filepath = voldir / fname
+        with filepath.open("w+", encoding='utf-8') as f:
+            f.write("<?xml version='1.0' encoding='UTF-8'?>\n")
+            
+            f.write("<text>\n")
+            keylist = sorted(list(self.pages.keys()))
+            for k in keylist:
+                print(f"processing page {k}")
+                page = self.pages[k]
+                if page.header and len(page.header.tokens) >= 3:
+                    running_title_toks = page.header.tokens[2:]
+                    if running_title_toks:
+                        running_title = ''.join([tok.text_with_ws for tok in running_title_toks])
+                        pbstring = f"<pb n='{page.number}' ed='{running_title}'/>"
+                    else:
+                        pbstring = f"<pb n='{page.number}' />"
+                else:
+                    pbstring = f"<pb n='{page.number}' />"
+
+
+                print(pbstring, file=f)
+                print(page.header, file=f)
+                print(page, file=f)
+
+            f.write("/text>")
+
+        
+
 
 def flatten(a):
     res = []
@@ -67,3 +97,5 @@ p1 = loader.pages[697]
 left_column,right_column = nlp.split_columns(p1)
 ml = nlp.merged_lines(p1)
 fused_line = ml[0]
+voldir = Path("/tmp/volumes")
+
