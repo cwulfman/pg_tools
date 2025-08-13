@@ -1,3 +1,4 @@
+from pathlib import Path
 import unicodedata
 from copy import deepcopy
 from lxml import etree
@@ -111,6 +112,7 @@ class Span:
         
         # self.objects = [genObject(child) for child in element if child.get('class') is not None]
 
+
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
 
@@ -192,6 +194,10 @@ class Span:
             
 
 class Page(Span):
+    def __init__(self, element:etree.Element, page_number=None):
+        super().__init__(element)
+        self.number = page_number
+        self._columns = None
 
     def __str__(self):
         page = ''
@@ -200,9 +206,49 @@ class Page(Span):
         return page
 
     @property
+    def columns(self):
+        if self._columns is None:
+            self._columns = {}
+            left,right = split_columns(self)
+            self._columns['left'] = left
+            self._columns['right'] = right
+        return self._columns
+
+    @property
+    def greek_columns(self):
+        hits = []
+        for side in ['left', 'right']:
+            if self.columns[side].is_greek():
+                hits.append(self.columns[side])
+        return hits
+                
+
+    @property
     def blocks(self):
         return [o for o in self.objects if o.type == 'ocrx_block']
 
+
+    def serialize(self, dir:Path, **kwargs):
+        
+        if self.lines:
+            header = self.columns['left'].remove_header()
+            greek_columns = self.greek_columns
+        else:
+            header = None
+            greek_columns = []
+
+        fname = Path(str(self.number))
+        file_path = dir / fname.with_suffix('.xml')
+        with file_path.open('w+', encoding='utf-8') as f:
+            f.write("<?xml version='1.0' encoding='UTF-8'?>\n")
+            f.write("<text>\n")
+            f.write(f"<pb n='{self.number}'/>\n")
+            if header:
+                f.write(header)
+            for column in greek_columns:
+                f.write('<cb/>\n')
+                f.write(str(column))
+            f.write("</text>")
 
     def repair_fused_line(self, fused_line):
         left_line, right_line = split_line(fused_line)
@@ -216,7 +262,8 @@ class Page(Span):
         else:
             left_block.objects[left_idx] = left_line
 
-        breakpoint()
+        # breakpoint()
+        pass
 
         right_block,right_idx = right_column.line_after_index(right_line)
         target = right_block.objects[right_idx]
@@ -345,12 +392,20 @@ class Column:
     
 
 
+    # def is_greek(self, threshold = .5):
+    #     if len(self.blocks) == 0:
+    #         return False
+    #     else:
+    #         greek_blocks = [b for b in self.blocks if b.is_greek()]
+    #         return (len(greek_blocks) / len(self.blocks)) >= threshold
+
+
     def is_greek(self, threshold = .5):
-        if len(self.blocks) == 0:
+        if len(self.lines) == 0:
             return False
         else:
-            greek_blocks = [b for b in self.blocks if b.is_greek()]
-            return (len(greek_blocks) / len(self.blocks)) >= threshold
+            greek_lines = [line for line in self.lines if line.is_greek()]
+            return (len(greek_lines) / len(self.lines)) >= threshold
 
 
 
@@ -463,7 +518,8 @@ def split_line(line):
             left_line.objects = latin_span
             right_line.objecs = greek_span
         else:
-            breakpoint()
+            # breakpoint()
+            pass
 
     return left_line,right_line
         

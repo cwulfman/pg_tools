@@ -25,7 +25,7 @@ class Loader:
         self.dir = Path(voldir)
         self.pages: dict[int,nlp.Page]  = dict()
 
-    def load_page(self, page_file:Path):
+    def load_page(self, page_file:Path, page_number):
         # tree = etree.parse(page_file)
         # clean the file's contents first
         with page_file.open('r') as pf:
@@ -34,7 +34,7 @@ class Loader:
         tree = etree.fromstring(clean_data)
         try:
             page_element =  tree.xpath("//xhtml:div[@class = 'ocr_page']", namespaces=ns)[0]
-            return nlp.Page(page_element)
+            return nlp.Page(page_element, page_number)
         except IndexError as e:
             logging.error(f"{e} file had no ocr_page element")
 
@@ -42,8 +42,13 @@ class Loader:
 
     def load(self):
         for page_file in self.dir.glob("*.html"):
-            page_object = self.load_page(page_file)
+            page_number = int(page_file.stem)
+            page_object = self.load_page(page_file, page_number)
             self.pages[int(page_file.stem)] = page_object
+
+    def reload(self):
+        self.pages: dict[int,nlp.Page]  = dict()
+        self.load()
 
 
 def flatten(a):
