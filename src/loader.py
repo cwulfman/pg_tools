@@ -65,18 +65,19 @@ class Loader:
                     running_title_toks = page.header.tokens[2:]
                     if running_title_toks:
                         running_title = ''.join([tok.text_with_ws for tok in running_title_toks])
-                        pbstring = f"<pb n='{page.number}' ed='{running_title}'/>"
+                        running_title = running_title.replace('"','')
+                        pbstring = f"<pb n=\"{page.number}\" ed=\"{running_title}\"/>"
                     else:
-                        pbstring = f"<pb n='{page.number}' />"
+                        pbstring = f"<pb n=\"{page.number}\" />"
                 else:
-                    pbstring = f"<pb n='{page.number}' />"
+                    pbstring = f"<pb n=\"{page.number}\" />"
 
 
                 print(pbstring, file=f)
-                print(page.header, file=f)
+                # print(page.header, file=f)
                 print(page, file=f)
 
-            f.write("/text>")
+            f.write("</text>")
 
         
 

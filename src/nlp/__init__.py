@@ -44,7 +44,7 @@ class Token:
     def __init__(self, element:etree.Element) -> None:
         self.type = 'token'
         self.element = element
-        self.text = element.text
+        self.text = self.clean_text(element.text)
         self.tail = element.tail
         bbox_string = element.get('title').split(';')[0].split(' ')[1:]
         values = [int(v) for v in bbox_string]
@@ -64,6 +64,16 @@ class Token:
             return self.text + self.tail
         else:
             return self.text
+
+
+    def clean_text(self,text):
+        # Replace bad entities (example: replace &shy; with actual soft hyphen)
+        text = text.replace("&shy;", "\u00AD")
+        text = text.replace("&", "&amp;")
+        text = text.replace("<", "&lt;")
+        text = text.replace(">", "&gt;")
+        return text
+        
 
 
     def is_greek(self, threshold: float = 0.5) -> bool:
@@ -202,12 +212,15 @@ class Page(Span):
 
     def __str__(self):
         page = ''
-        if self.columns:
-            page += str(self.columns['left'])
-            page += str(self.columns['right'])
-        else:
-            for o in self.objects:
-                page += str(o)
+        # if self.columns:
+        if self.greek_columns:
+            for column in self.greek_columns:
+                page += str(column)
+            # page += str(self.columns['left'])
+            # page += str(self.columns['right'])
+        # else:
+        #     for o in self.objects:
+        #         page += str(o)
         return page
 
     @property
@@ -262,11 +275,12 @@ class Page(Span):
             running_title_toks = header.tokens[2:]
             if running_title_toks:
                 running_title = ''.join([tok.text_with_ws for tok in running_title_toks])
-                pbstring = f"<pb n='{self.number}' ed='{running_title}'/>"
+                running_title 
+                pbstring = f"<pb n=\"{self.number}\" ed=\"{running_title}\"/>"
             else:
-                pbstring = f"<pb n='{self.number}' />"
+                pbstring = f"<pb n=\"{self.number}\" />"
         else:
-            pbstring = f"<pb n='{self.number}' />"
+            pbstring = f"<pb n=\"{self.number}\" />"
 
             file_handle.write(f"{pbstring}\n")
             
@@ -277,8 +291,10 @@ class Page(Span):
                     elif column == self.columns['right']:
                         cb_number = header.tokens[1].text
                     cb = f"<cb n='{cb_number}' />\n"
+                if cb_number.isdigit():
+                    cb = f"<cb n='{cb_number}' />\n"
                 else:
-                    cb = "<cb/>"
+                    cb = "<cb />"
                 file_handle.write(f"{cb}\n")
                 file_handle.write(str(column))
 
@@ -315,10 +331,11 @@ class Page(Span):
 class Block(Span):
 
     def __str__(self):
-        block = '<ab>'
+        # block = '<ab>'
+        block = ''
         for o in self.objects:
             block += str(o)
-        block += '</ab>\n'
+        # block += '</ab>\n'
         return block
     
 
@@ -381,8 +398,8 @@ class Column:
         
     def __str__(self):
         coltext =''
-        if self.number:
-            coltext += f"<cb n='{self.number}'/>\n"
+        if self.number and self.number.isdigit():
+            coltext += f"<cb n='{self.number}' />\n"
         else:
             coltext += "<cb/>\n"
 
