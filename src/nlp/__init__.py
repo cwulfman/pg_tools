@@ -118,6 +118,31 @@ class Token:
         else:
             return self.text
 
+    @property
+    def width(self):
+        return self.bbox.width
+
+    @property
+    def height(self):
+        return self.bbox.height
+
+    @property
+    def left(self):
+        return self.bbox.min.x
+
+    @property
+    def right(self):
+        return self.bbox.max.x - self.bbox.height
+
+    @property
+    def top(self):
+        return self.bbox.min.x
+
+    @property
+    def bottom(self):
+        return self.bbox.max.y
+        
+
 
     def clean_text(self,text):
         # Replace bad entities (example: replace &shy; with actual soft hyphen)
@@ -818,6 +843,80 @@ class Line3(Line2):
                          self.tokens[-1].bbox.max.y)
 
         
+class Line:
+    def __init__(self, token_list):
+        self.tokens = token_list
+        # self.words = [tok for tok in self.tokens if not(tok.is_punct)]
+        # calculate the BBox from the tokens
+        self.bbox = BBox(self.tokens[0].bbox.min.x,
+                         self.tokens[0].bbox.min.y,
+                         self.tokens[-1].bbox.max.x,
+                         self.tokens[-1].bbox.max.y)
+
+
+
+    def __str__(self):
+        txt = ''
+        for token in self.tokens:
+            txt += token.text_with_ws
+        return txt
+
+    def __repr__(self):
+        txt = ''
+        for token in self.tokens:
+            txt += token.text_with_ws
+        return f"|{txt}|"
+
+    @property
+    def words(self):
+        return [tok for tok in self.tokens if not(tok.is_punct)]
+
+    @property
+    def width(self):
+        return self.bbox.width
+
+    @property
+    def height(self):
+        return self.bbox.height
+
+    @property
+    def left(self):
+        return self.bbox.min.x
+
+    @property
+    def right(self):
+        return self.bbox.max.x - self.bbox.height
+
+    @property
+    def top(self):
+        return self.bbox.min.x
+
+    @property
+    def bottom(self):
+        return self.bbox.max.y
+
+    @property
+    def percent_greek(self):
+        if len(self.words) == 0:
+            return 0
+        else:
+            greek_words = [word for word in self.words if word.is_greek()]
+            return round(100 * (len(greek_words) / len(self.words)))
+
+    @property
+    def is_greek(self) -> bool:
+        return self.percent_greek > 60
+
+    def adjacent(self, span) -> bool:
+        return abs(self.top - span.top) <= 10
+    
+
+
+    def split(self, x):
+        left_line = Line(self.tokens[:x])
+        right_line = Line(self.tokens[x:])
+        return left_line, right_line
+        
 
 class Block2(Span2):
     def __init__(self, tree:etree.Element):
@@ -839,6 +938,135 @@ class Block2(Span2):
     def mean_bottom(self):
         return statistics.mean([line.bottom for line in self.lines])
     
+
+class Page:
+    def __init__(self, tree:etree.Element):
+        self.root = tree.xpath("//xhtml:div[@class='ocr_page']", namespaces=ns)[0]
+        bbox_string = self.root.get('title').split(';')[0].split(' ')[1:]
+        values = [int(v) for v in bbox_string]
+        self.bbox = BBox(*values)
+
+        self.lines = []
+        source_lines = self.root.xpath(".//xhtml:span[@class='ocr_line']",  namespaces=ns)
+        for source_line in source_lines:
+            source_tokens = source_line.xpath(".//xhtml:span[@class='ocrx_word']", namespaces=ns)
+            self.lines.append(Line([Token(x) for x in source_tokens]))
+        self.column_numbers = self.extract_column_numbers()
+
+    @property
+    def width(self):
+        return self.bbox.width
+
+    @property
+    def height(self):
+        return self.bbox.height
+
+    @property
+    def left(self):
+        return self.bbox.min.x
+
+    @property
+    def right(self):
+        return self.bbox.max.x
+
+    @property
+    def percent_greek(self):
+        if len(self.words) == 0:
+            return 0
+        else:
+            greek_words = [word for word in self.words if word.is_greek()]
+            return round(100 * (len(greek_words) / len(self.words)))
+
+    @property
+    def midline(self):
+        return self.width / 2
+
+    @property
+    def header_lines(self):
+        return self.lines_adjacent(self.lines[0])
+
+    def lines_adjacent(self, a_line):
+        return [line for line in self.lines if abs(a_line.bottom - line.bottom) <= 10]
+
+    def lines_aligned_left(self, x, padding=30):
+        # return [line for line in self.lines if abs(line.left - x) <= padding]
+        return [line for line in self.lines if line.left <= x]
+
+    @property
+    def left_column(self):
+        left_lines = self.lines_aligned_left(self.midline / 2)
+        # drop the first line; it is the header
+        # return left_lines[1:]
+        return left_lines
+
+    @property
+    def right_column(self):
+        return [line for line in self.lines if abs(line.left - self.midline) <= 300]
+
+    def extract_column_numbers(self):
+        header_string = ' '.join([str(l) for l in self.header_lines])
+        p = re.compile(r'^(\d+)\D+(\d+).*$')
+        m = p.match(header_string)
+        if m:
+            left_column_num = m.group(1)
+            right_column_num = m.group(2)
+            return left_column_num, right_column_num
+
+    def remove_header(self):
+        for line in self.header_lines:
+            self.lines.remove(line)
+        return self.lines
+
+
+    def display(self):
+        for i,line in enumerate(self.lines):
+            print(f"{i}\t{line}")
+
+
+    @property
+    def fused_lines(self):
+        return [line for line in self.left_column if line.right > self.midline]
+
+
+    def fix_fused_line(self, fused_line):
+        split_point = round(len(fused_line.tokens) / 2)
+        left_line, right_line = fused_line.split(split_point)
+        if right_line.is_greek:
+            while left_line.words[-1].is_greek():
+                self.shift_word_right(left_line, right_line)
+        else:
+            while right_line.words[0].is_greek():
+                self.shift_word_left(left_line, right_line)
+
+        idx =self.lines.index(fused_line)
+        del(self.lines[idx])
+        self.lines.insert(idx, right_line)
+        self.lines.insert(idx, left_line)
+        
+        
+    def fix_fused_lines(self):
+        fused_lines = self.fused_lines
+        for fl in fused_lines:
+            self.fix_fused_line(fl)
+
+    def shift_word_right(self, line1, line2):
+        word = line1.words[-1]
+        index = line1.tokens.index(word)
+        while len(line1.tokens) != index:
+            tok = line1.tokens.pop()
+            # line2.tokens.appendleft(tok)
+            line2.tokens.insert(0, tok)
+
+        
+    def shift_word_left(self, line1, line2):
+        word = line1.words[0]
+        index = line1.tokens.index(word)
+        while len(line1.tokens) != index:
+            tok = line1.tokens.popleft()
+            line2.tokens.append(tok)
+
+        
+            
     
 
 class Page2:
@@ -982,3 +1210,4 @@ def load_page_file(page_file:Path):
 pfile = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148/00000102.html')
 page_root = load_page_file(pfile)
 p1 = Page2(page_root)
+p2 = Page(page_root)
