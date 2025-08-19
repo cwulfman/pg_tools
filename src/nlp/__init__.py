@@ -848,14 +848,17 @@ class Page2:
         values = [int(v) for v in bbox_string]
         self.bbox = BBox(*values)
         self.blocks = [Block2(b) for b in self.root.xpath("./xhtml:div[@class='ocrx_block']", namespaces=ns)]
+        self.lines = flatten([block.lines for block in self.blocks])
+        self.words = flatten([block.words for block in self.blocks])
+        self.tokens = flatten([block.tokens for block in self.blocks])
 
     def __repr__(self):
         return f"|Page: {len(self.lines)} lines|"
 
     def display(self):
         txt = ''
-        for i,l in enumerate(self.lines):
-            txt += f"{i}\t{l}\n"
+        for i,line in enumerate(self.lines):
+            txt += f"{i}\t{line}\n"
         print(txt)
 
     @property
@@ -866,7 +869,6 @@ class Page2:
     def height(self):
         return self.bbox.height
 
-
     @property
     def left(self):
         return self.bbox.min.x
@@ -874,18 +876,6 @@ class Page2:
     @property
     def right(self):
         return self.bbox.max.x
-
-    @property
-    def lines(self):
-        return flatten([block.lines for block in self.blocks])
-        
-    @property
-    def words(self):
-        return flatten([block.words for block in self.blocks])
-
-    @property
-    def tokens(self):
-        return flatten([block.tokens for block in self.blocks])
 
     @property
     def percent_greek(self):
@@ -920,30 +910,48 @@ class Page2:
 
     @property
     def right_column(self):
-        return [line for line in self.lines if abs(line.left - self.midline) <= 100]
+        return [line for line in self.lines if abs(line.left - self.midline) <= 300]
 
     @property
     def fused_lines(self):
         return [line for line in self.left_column if line.right > self.midline]
 
+
     def fix_fused_line(self, fused_line):
         split_point = round(len(fused_line.tokens) / 2)
         left_line, right_line = fused_line.split(split_point)
+        if right_line.is_greek:
+            while left_line.words[-1].is_greek():
+                self.shift_word_right(left_line, right_line)
+        else:
+            while right_line.words[0].is_greek():
+                self.shift_word_left(left_line, right_line)
 
-        # if right_line.is_greek:
-        #     while left_line.words[-1].is_greek:
-        #         moving_word = 
-
-        return left_line, right_line
+        idx =self.lines.index(fused_line)
+        del(self.lines[idx])
+        self.lines.insert(idx, right_line)
+        self.lines.insert(idx, left_line)
         
         
-    def shift_word(self, line1, line2):
+    def fix_fused_lines(self):
+        fused_lines = self.fused_lines
+        for fl in fused_lines:
+            self.fix_fused_line(fl)
+
+    def shift_word_right(self, line1, line2):
         word = line1.words[-1]
         index = line1.tokens.index(word)
-        move_toks = line1.tokens[index:]
-        line2.tokens.extend(move_toks)
         while len(line1.tokens) != index:
-            line1.tokens.pop()
+            tok = line1.tokens.pop()
+            line2.tokens.appendleft(tok)
+
+        
+    def shift_word_left(self, line1, line2):
+        word = line1.words[0]
+        index = line1.tokens.index(word)
+        while len(line1.tokens) != index:
+            tok = line1.tokens.popleft()
+            line2.tokens.append(tok)
 
         
 
