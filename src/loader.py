@@ -61,21 +61,19 @@ class Loader:
             for k in keylist:
                 print(f"processing page {k}")
                 page = self.pages[k]
-                if page.header and len(page.header.tokens) >= 3:
-                    running_title_toks = page.header.tokens[2:]
-                    if running_title_toks:
-                        running_title = ''.join([tok.text_with_ws for tok in running_title_toks])
-                        running_title = running_title.replace('"','')
-                        pbstring = f"<pb n=\"{page.number}\" ed=\"{running_title}\"/>"
+                if page:
+                    page.fix_fused_lines()
+                    running_head = page.running_head
+                    if running_head:
+                        pbstring = f"<pb n=\"{page.number}\" ed=\"{running_head.strip()}\"/>"
                     else:
                         pbstring = f"<pb n=\"{page.number}\" />"
-                else:
-                    pbstring = f"<pb n=\"{page.number}\" />"
-
-
-                print(pbstring, file=f)
-                # print(page.header, file=f)
-                print(page, file=f)
+                
+                    print(pbstring, file=f)
+                    # print(page.header, file=f)
+                    # print(page, file=f)
+                    greek_column = page.greek_column
+                    print(greek_column, file=f)
 
             f.write("</text>")
 
@@ -95,8 +93,5 @@ def flatten(a):
 loader = Loader(Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148'))
 loader.load()
 p1 = loader.pages[697]
-left_column,right_column = nlp.split_columns(p1)
-ml = nlp.merged_lines(p1)
-fused_line = ml[0]
 voldir = Path("/tmp/volumes")
 
