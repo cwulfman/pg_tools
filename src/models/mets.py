@@ -98,6 +98,7 @@ class Page(Mets):
         page += f"<pb n='{self.physical_order}' facs='njp_{self.directory.stem}_{self.coordOCR_file.stem}'/>\n"
         if self.logical_order:
             page += f"<cb n='{self.logical_order}'/>\n"
+            page += f"<cb n='{self.logical_order + 1}'/>\n"
         page += self.doc.text
         return page
 
