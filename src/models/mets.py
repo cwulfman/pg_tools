@@ -26,10 +26,18 @@ class Mets:
     def __init__(self, directory:Path):
         self.directory = directory
 
-class Page(Mets):
+class MetsPage(Mets):
     def __init__(self, root:etree.Element, directory:Path):
         self.root = root
         self.directory = directory
+        attributes = self.root.attrib
+        self.physical_order = attributes.get("ORDER")
+        self.logical_order = attributes.get("ORDERLABEL")
+        if attributes.get("ADMID"):
+            self.tags = attributes.get("ADMID")
+        else:
+            self.tags = []
+        
         self.fileids = self.root.xpath("mets:fptr/@FILEID", namespaces=namespaces)
         self._xml = None
         self._html = None
@@ -79,17 +87,18 @@ class Page(Mets):
         file = [f for f in fgroup if f.get('ID') == fileid][0]
         return fgroup
 
-    @property
-    def physical_order(self):
-        orders = self.root.xpath("@ORDER", namespaces=namespaces)
-        if orders:
-            return int(orders[0])
+    # @property
+    # def physical_order(self):
+    #     orders = self.root.xpath("@ORDER", namespaces=namespaces)
+    #     if orders:
+    #         return int(orders[0])
 
-    @property
-    def logical_order(self):
-        orders = self.root.xpath("@ORDERLABEL", namespaces=namespaces)
-        if orders:
-            return orders[0]
+    # @property
+    # def logical_order(self):
+    #     orders = self.root.xpath("@ORDERLABEL", namespaces=namespaces)
+    #     if orders:
+    #         return orders[0]
+
 
     @property
     def text(self) -> str:
@@ -103,7 +112,7 @@ class Page(Mets):
         return page
 
 
-class Volume(Mets):
+class MetsVolume(Mets):
     def __init__(self, directory:Path):
         self.directory = directory
         self.mets = etree.parse(list(self.directory.glob("*.xml"))[0])
@@ -115,8 +124,17 @@ class Volume(Mets):
             use = f.xpath("parent::mets:fileGrp/@USE", namespaces=namespaces)
             self.filepaths[id] = fpath
             self.fileuses[id] = use
-        self._pages = None
+        self._pages = {}
         self._xml = None
+        self.page_index = {}
+        for page_div in self.mets.xpath("//mets:div[@TYPE='page']", namespaces=namespaces):
+            pnum = page_div.get("ORDER")
+            if pnum:
+                self.page_index[int(pnum)] = page_div
+                
+
+
+    
 
     def fileuse(self, id):
         """Determines the use of a file (coordOCR, OCR, or image). """
@@ -125,13 +143,18 @@ class Volume(Mets):
         use = file.xpath("parent::mets:fileGrp/@USE", namespaces=namespaces)
         return use[0]
 
-    @property
-    def pages(self):
-        if self._pages is None:
-            self._pages = [Page(div, self.directory) for div in
-                            list(self.mets.xpath("//mets:div[@TYPE='page']",
-                                                 namespaces=namespaces))]
-        return self._pages
+    
+    def page(self, pagenum):
+        if page := self._pages.get(pagenum):
+            return page
+
+        if self.page_index.get(pagenum) is not None:
+            pdiv = self.page_index[pagenum]
+            self._pages[pagenum] = MetsPage(pdiv, self.directory)
+            return self._pages[pagenum]
+        
+        raise IndexError("no such page")
+
 
     @property
     def xml(self):

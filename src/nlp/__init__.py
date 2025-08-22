@@ -558,20 +558,106 @@ class Page(Span):
     
 
     def analyze(self):
+        breakpoint()
+    
+
+
+class BlankPage(Page):
+    def __init__(self, tree:etree.Element, number:int=0):
+        super().__init__(tree)
+
+    # stunt all relevant properties and methods
+
+    @property
+    def midline(self):
+        return 0
+
+    @property
+    def margin_left(self):
+        return 0
+
+    @property
+    def margin_right(self):
+        return 0
+
+    @property
+    def margin_top(self):
+        return 0
+
+    @property
+    def margin_bottom(self):
+        return 0
+
+    @property
+    def print_region(self):
+        return BBox(0,0,0,0)
+
+    def lines_adjacent(self, a_line):
+        return None
+
+    @property
+    def header_lines(self):
+        return None
+
+    def lines_aligned_left(self, x, padding=30):
+        return None
+
+    def blocks_aligned_left(self, x, padding=30):
+        return None
+
+    @property
+    def column_numbers(self):
+        return None
+    
+    @property
+    def running_head(self):
+        return None
+
+    @property
+    def left_column(self):
+        return None
+
+    def left_lines(self, left_pad=20):    
+        return None
+
+    def columns(self):
+        return None, None
+
+    @property
+    def right_column(self):
+        return None
+
+    @property
+    def greek_column(self):
+        return None
+
+    @property
+    def fused_lines(self):
+        return None
+
+    def repair_fused_line(self, fused_line):
         pass
     
+    def repair_fused_lines(self):
+        pass
 
+    @property
+    def gutters(self):
+        return None
 
-    
+    @property
+    def has_columns(self):
+        return False
+
     
 class Column:
-    def __init__(self, blocks, side, number=None):
+    def __init__(self, blocks, side=None, number=None):
         self.blocks = blocks
         self.side = side
         self.number = number
 
     def __repr__(self):
-        return f"<column n='{self.number}'>"
+        return f"<Column side='{self.side}' n='{self.number}'>"
         
     def __str__(self):
         coltext =''
