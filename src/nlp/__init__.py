@@ -58,6 +58,21 @@ class BBox:
     def __init__(self, x_min:int, y_min:int, x_max:int, y_max:int):
         self.min = Point(x_min, y_min)
         self.max = Point(x_max, y_max)
+
+    def contains(self, inner_bbox):
+        condition1 = self.left <= inner_bbox.left
+        condition2 = self.right >= inner_bbox.right
+        condition3 = self.top <= inner_bbox.top
+        condition4 = self.bottom >= inner_bbox.bottom
+        return all([condition1, condition2, condition3, condition4])
+
+    def contained_by(self, outer_bbox):
+        return outer_bbox.contains(self)
+
+    def vertically_centered_within(self, outer_bbox, tolerance:int=3):
+        left_distance = self.left - outer_bbox.left
+        right_distance = outer_bbox.right - self.right
+        return abs(right_distance - left_distance) <= tolerance
     
 
 class LayoutObject:

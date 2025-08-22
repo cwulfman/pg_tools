@@ -104,3 +104,6 @@ class Page:
         
         
 volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
+vol = Volume(volpath)
+
+p = vol.page(71)
