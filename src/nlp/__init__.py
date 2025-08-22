@@ -539,7 +539,16 @@ class Page(Span):
     def repair_fused_lines(self):
         for line in self.fused_lines:
             self.repair_fused_line(line)
-        
+
+    @property
+    def has_columns(self):
+        pass
+
+    
+
+    def analyze(self):
+        pass
+    
 
 
     
