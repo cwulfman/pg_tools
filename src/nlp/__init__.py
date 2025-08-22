@@ -541,6 +541,17 @@ class Page(Span):
             self.repair_fused_line(line)
 
     @property
+    def gutters(self):
+        guts = []
+        for line in self.lines:
+            adjacents = self.lines_adjacent(line)
+            if len(adjacents) == 2:
+                adjacents.sort(key=lambda x: x.left)
+                guts.append(adjacents[1].left - adjacents[0].right)
+        return guts
+        
+
+    @property
     def has_columns(self):
         pass
 
@@ -734,3 +745,9 @@ def load_page_file(page_file:Path):
         clean_data = fix_entities(raw_data)
         tree = etree.fromstring(clean_data)
     return tree
+
+
+def report(lines):
+    print("i\tleft\ttop\twidth\tline")
+    for i,l in enumerate(lines):
+        print(f"{i}\t{l.left}\t{l.top}\t{l.width}\t{l}")
