@@ -6,7 +6,7 @@ import unicodedata
 from copy import deepcopy, copy
 from lxml import etree
 from typing import Iterator
-from .bbox import BBox
+from nlp.bbox import BBox
 
 ns = {"xhtml": "http://www.w3.org/1999/xhtml"}
 
@@ -518,7 +518,7 @@ class Page(Span):
     
 
     def analyze(self):
-        breakpoint()
+        pass
     
 
 
@@ -709,7 +709,6 @@ class Block(Span):
     def paras(self):
         return [o for o in self.objects if o.type == 'ocr_par']
 
-
     @property
     def lines(self):
         return flatten([para.lines for para in self.paras])
@@ -722,10 +721,10 @@ class Block(Span):
     def tokens(self):
         return flatten([para.tokens for para in self.paras])
 
+    
 
 
-
-class Par(Span):
+class Par(Block):
     def __str__(self):
         p = '\n'
         for o in self.objects:

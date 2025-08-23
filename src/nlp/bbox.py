@@ -50,16 +50,30 @@ class BBox:
     def contained_by(self, outer_bbox):
         return outer_bbox.contains(self)
 
+    def intersects_vertically(self, other):
+        return (self.max.y > other.min.y) or (other.max.y < self.min.y)
+
+    def intersects_horizontally(self, other):
+        return (self.max.y > other.min.x) or (other.max.x < self.min.x)
+    
+    def intersects(self, other):
+        return self.intersects_vertically(other) or self.intersects_horizontally(other)
+
     def is_horizontally_centered_within(self, outer_bbox, tolerance:int=0):
-        left_distance = self.left - outer_bbox.left
-        right_distance = outer_bbox.right - self.right
-        return abs(right_distance - left_distance) <= tolerance
+        left_distance = abs(self.left - outer_bbox.left)
+        right_distance = abs(outer_bbox.right - self.right)
+        return (self.contained_by(outer_bbox) and
+                abs(right_distance - left_distance) <= tolerance)
 
 
     def is_vertically_centered_within(self, outer_bbox, tolerance:int=0):
-        top_distance = self.top - outer_bbox.top
+        top_distance = outer_bbox.top - self.top
         bottom_distance = outer_bbox.bottom - self.bottom
-        return abs(bottom_distance - top_distance) <= tolerance
+        return (self.contained_by(outer_bbox) and
+                abs(bottom_distance - top_distance) <= tolerance)
+
+
+
 
 
     def is_aligned_left(self, other, tolerance:int=0):
@@ -75,8 +89,50 @@ class BBox:
         return abs(self.bottom - other.bottom) <= tolerance
 
 
-    def is_adjacent_right(self, other, side):
+    def is_to_the_right_of(self, other, tolerance=0):
+        return self.left - other.right <= tolerance
+
+    def is_to_the_left_of(self, other, tolerance=0):
+        return other.left - self.right <= tolerance
+
+    def is_above(self, other, tolerance=0):
+        self.bottom - other.top <= tolerance
+    
+    def is_below(self, other, tolerance=0):
+        other.bottom - self.top <= tolerance
+    
+
+    def is_adjacent_right(self, other, side, tolerance:int=0):
         """Other box is next to me on the right."""
         pass
         
+        
+    def alignment_with(self, other_box, tolerance:int=0):
+        alignments = []
+
+        if self.contains(other_box):
+            alignments.append('contains')
+
+        if self.contained_by(other_box):
+            alignments.append('contained_by')
+
+        if self.is_horizontally_centered_within(other_box, tolerance=tolerance):
+            alignments.append('horizontally_centered_within')
+            
+        if self.is_vertically_centered_within(other_box, tolerance=tolerance):
+            alignments.append('vertically_centered_within')
+
+        if self.is_aligned_left(other_box, tolerance=tolerance):
+            alignments.append('left')
+            
+        if self.is_aligned_right(other_box, tolerance=tolerance):
+            alignments.append('right')
+            
+        if self.is_aligned_top(other_box, tolerance=tolerance):
+            alignments.append('top')
+            
+        if self.is_aligned_bottom(other_box, tolerance=tolerance):
+            alignments.append('bottom')
+
+        return alignments
         

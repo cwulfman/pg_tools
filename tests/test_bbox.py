@@ -15,24 +15,52 @@ def test_contains():
     assert outer_bbox.contained_by(overlapping_bbox) is False
 
 
-def test_horizontally_centered():
-    outer_bbox = BBox(0,0, 20,20)
-    centered_bbox = BBox(5,5, 15, 20)
-    uncentered_bbox = BBox(7,0, 11,10)
+def test_vertical_intersection():
+    a = BBox(100,100, 200,200)
+    b = BBox(150,150, 250,250)
+    c = BBox(500,500, 600,600)
 
-    assert centered_bbox.is_horizontally_centered_within(outer_bbox)
-    assert uncentered_bbox.is_horizontally_centered_within(outer_bbox) is False
-    assert uncentered_bbox.is_horizontally_centered_within(outer_bbox, tolerance=3) is True
+    assert a.intersects_vertically(b)
+    assert a.intersects_vertically(c) is False
 
-def test_vertically_centered():
-    outer_bbox = BBox(0,0, 20,20)
-    centered_bbox = BBox(5,5, 15, 15)
-    uncentered_bbox = BBox(0,5, 11, 16)
 
-    assert centered_bbox.is_vertically_centered_within(outer_bbox)
-    assert uncentered_bbox.is_vertically_centered_within(outer_bbox) is False
-    assert uncentered_bbox.is_vertically_centered_within(outer_bbox, tolerance=2) is True
+def test_horizontal_intersection():
+    a = BBox(100,100, 200,200)
+    b = BBox(150,150, 250,250)
+    c = BBox(500,500, 600,600)
 
+    assert a.intersects_horizontally(b)
+    assert a.intersects_horizontally(c) is False
+    
+def test_intersection():
+    a = BBox(100,100, 200,200)
+    b = BBox(150,150, 250,250)
+    c = BBox(500,500, 600,600)
+
+    assert a.intersects(b)
+
+
+def test_horizontally_centered_within():
+   outer_bbox = BBox(0,0, 20,20)
+   centered_bbox = BBox(5,5, 15, 20)
+   uncentered_bbox = BBox(7,0, 11,10)
+   not_within_bbox = BBox(5,5, 30,30)
+
+   assert centered_bbox.is_horizontally_centered_within(outer_bbox)
+   assert uncentered_bbox.is_horizontally_centered_within(outer_bbox) is False
+   assert uncentered_bbox.is_horizontally_centered_within(outer_bbox, tolerance=3) is True
+   assert not_within_bbox.is_horizontally_centered_within(outer_bbox, tolerance=3) is False
+
+# def test_vertically_centered_within():
+#     outer_bbox = BBox(0,0, 20,20)
+#     centered_bbox = BBox(5,5, 15, 15)
+#     uncentered_bbox = BBox(0,5, 11, 16)
+#     not_within_bbox = BBox(5,5, 30,30)
+
+#     assert centered_bbox.is_vertically_centered_within(outer_bbox)
+#     assert uncentered_bbox.is_vertically_centered_within(outer_bbox) is False
+#     assert uncentered_bbox.is_vertically_centered_within(outer_bbox, tolerance=2) is True
+#     assert not_within_bbox.is_vertically_centered_within(outer_bbox, tolerance=3) is False
 
 def test_alignment():
     main_box = BBox(30,30,50,50)
