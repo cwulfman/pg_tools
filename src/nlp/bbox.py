@@ -60,3 +60,23 @@ class BBox:
         top_distance = self.top - outer_bbox.top
         bottom_distance = outer_bbox.bottom - self.bottom
         return abs(bottom_distance - top_distance) <= tolerance
+
+
+    def is_aligned_left(self, other, tolerance:int=0):
+        return abs(self.left - other.left) <= tolerance
+
+    def is_aligned_right(self, other, tolerance:int=0):
+        return abs(self.right - other.right) <= tolerance
+
+    def is_aligned_top(self, other, tolerance:int=0):
+        return abs(self.top - other.top) <= tolerance
+
+    def is_aligned_bottom(self, other, tolerance:int=0):
+        return abs(self.bottom - other.bottom) <= tolerance
+
+
+    def is_adjacent_right(self, other, side):
+        """Other box is next to me on the right."""
+        pass
+        
+        
