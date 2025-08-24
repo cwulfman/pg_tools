@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from lxml import etree
 from models.mets import MetsVolume, MetsPage
+from nlp.page import Page, BlankPage
 import nlp
 
 def fix_entities(xml_string:str) -> str:
@@ -22,10 +23,10 @@ class Loader:
         coordOCR_file = self.load_page_file(mets_page.coordOCR_file)
         exception_tags = ['BLANK', 'FRONT_COVER', 'BACK_COVER']
         if any([tag for tag in exception_tags if tag in mets_page.tags]):
-            nlp_page = nlp.BlankPage(coordOCR_file, page_num)
+            nlp_page = BlankPage(coordOCR_file, page_num)
         else:
-            nlp_page = nlp.Page(coordOCR_file, page_num)
-        return Page(mets_page, nlp_page)
+            nlp_page = Page(coordOCR_file, page_num)
+        return PgPage(mets_page, nlp_page)
 
 
     def load_page_file(self,page_file:Path):
@@ -37,7 +38,7 @@ class Loader:
 
 
 
-class Volume:
+class PgVolume:
     def __init__(self, volpath:Path):
         self.metsvol = MetsVolume(volpath)
         self.loader = Loader(volpath)
@@ -60,7 +61,7 @@ class Volume:
         return self._pages[page_num]
 
 
-class Page:
+class PgPage:
     def __init__(self, mets_page, nlp_page):
         self._mets_page = mets_page
         self._nlp_page = nlp_page
@@ -104,6 +105,6 @@ class Page:
         
         
 volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
-vol = Volume(volpath)
+vol = PgVolume(volpath)
 
 p = vol.page(71)

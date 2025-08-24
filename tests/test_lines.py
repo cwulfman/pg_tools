@@ -1,11 +1,9 @@
 from pathlib import Path
-from nlp import Line
-from nlp.bbox import BBox
-from pg import Volume, Page
+from pg import PgVolume
 
 
 volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
-vol:Volume = Volume(volpath)
+vol:PgVolume = PgVolume(volpath)
 
 
 def test_alignment():

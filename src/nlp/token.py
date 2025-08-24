@@ -16,6 +16,14 @@ class Token(LayoutObject):
     def __str__(self) -> str:
         return self.text_with_ws
 
+    def __len__(self) -> int:
+        return len(self.text_with_ws)
+
+
+    @property
+    def tokens(self):
+        return [self]
+
     @property
     def text_with_ws(self) -> str:
         if self.tail:

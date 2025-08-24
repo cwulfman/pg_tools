@@ -1,4 +1,4 @@
-from nlp import flatten
+from nlp.utils import flatten
 from nlp.line import Line
 from nlp.token import Token
 

@@ -9,6 +9,7 @@ def test_attributes():
     assert token.text == 'του'
     assert token.tail is None
     assert token.type == 'token'
+    assert len(token) == 3
 
 def test_token_text():
     greek_token = Token(token1_xml)

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from nlp import percent_greek
+from nlp.utils import percent_greek
 from nlp.span import Span
 
 class Line(Span):

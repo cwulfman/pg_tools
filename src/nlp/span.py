@@ -1,10 +1,11 @@
 from copy import deepcopy, copy
 from collections import deque
 from lxml import etree
+from nlp.utils import genObject
 from nlp.layout_object import LayoutObject
-from nlp import genObject
 from nlp.bbox import BBox
 from nlp.token import Token
+
 
 class Span(LayoutObject):
     def __init__(self, element:etree.Element):
@@ -26,6 +27,10 @@ class Span(LayoutObject):
             txt += str(object)
         return txt
 
+    def __len__(self) -> int:
+        return len(self.objects)
+    
+
 
     def reset_bbox(self):
         if len(self.objects) == 0:
@@ -44,7 +49,7 @@ class Span(LayoutObject):
     def tokens(self):
         token_list = []
         for obj in self.objects:
-            if obj.__class__ is Token:
+            if isinstance(obj, Token):
                 token_list.append(obj)
             else:
                 token_list = token_list + obj.tokens

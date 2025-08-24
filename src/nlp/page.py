@@ -1,10 +1,12 @@
 import re
 from lxml import etree
-from nlp import ns
+from nlp.utils import ns
 from nlp.span import Span
 from nlp.token import Token
 from nlp.bbox import BBox
 from nlp.column import Column
+
+
 
 class Page(Span):
     def __init__(self, tree:etree.Element, number:int=0):
@@ -295,3 +297,5 @@ class BlankPage(Page):
     @property
     def has_columns(self):
         return False
+
+
