@@ -337,10 +337,15 @@ class Line(Span):
             pass
 
         return left, right
-                    
 
 
+    def preceeds(self, other, padding=5):
+        """Returns True if the other line
+        is next to me on the right."""
+        my_box = self.bbox
+        other_box = other.bbox
 
+        return my_box.is_to_the_left_of(other_box, tolerance=padding)
         
 
 
@@ -433,12 +438,37 @@ class Page(Span):
         # return left_lines[1:]
         return Column(left_blocks, 'left', self.column_numbers.get('left'))
 
-    def left_lines(self, left_pad=20):
-        l1 = self.left + self.margin_left
-        l2 = l1 + left_pad
+    # def left_lines(self, left_pad=20):
+    #     l1 = self.left + self.margin_left
+    #     l2 = l1 + left_pad
+    #     return [line for line in self.lines
+    #             if line.left >= l1
+    #             and line.left < l2]
+
+    def aligned_left(self, line, tolerance=20):
+        return line.left - self.print_region.left <= tolerance
+
+    def aligned_right(self, line, tolerance=10):
+        return abs(self.print_region.right - line.right) <= tolerance
+    
+    def left_lines(self, tolerance=30):
         return [line for line in self.lines
-                if line.left >= l1
-                and line.left < l2]
+                if self.aligned_left(line, tolerance=tolerance)]
+
+    def right_lines(self, tolerance=10):
+        return [line for line in self.lines
+                if self.aligned_right(line, tolerance=tolerance)]
+
+    def left_column_new(self):
+        lines = self.left_lines(tolerance=50)
+        return Column(lines, 'left', self.column_numbers.get('left'))
+
+    def right_column_new(self):
+        lines = self.right_lines(tolerance=50)
+        return Column(lines, 'right', self.column_numbers.get('right'))
+
+    def columns_new(self):
+        return self.left_column_new(), self.right_column_new()
 
     def columns(self):
         left_column = []
@@ -611,6 +641,81 @@ class BlankPage(Page):
 
     
 class Column:
+    def __init__(self, lines, side=None, number=None):
+        self.lines = lines
+        self.side = side
+        self.number = number
+
+    def __repr__(self):
+        return f"<Column side='{self.side}' n='{self.number}'>"
+        
+    def __str__(self):
+        coltext =''
+        if self.number and self.number.isdigit():
+            coltext += f"<cb n='{self.number}' />\n"
+        else:
+            coltext += "<cb/>\n"
+
+        coltext += '\n'.join([str(line) for line in self.lines])
+        return coltext
+
+    @property
+    def tokens(self):
+        return flatten(line.tokens for line in self.lines)
+
+    @property
+    def words(self):
+        return flatten(line.words for line in self.lines)
+
+
+    @property
+    def percent_greek(self):
+        if len(self.words) == 0:
+            return 0
+        else:
+            greek_words = [word for word in self.words if word.is_greek]
+            return round(100 * (len(greek_words) / len(self.words)))
+
+
+        # won't work now that we're not using blocks
+    # def remove_header(self):
+    #     if self.blocks:
+    #         header = self.blocks.pop(0)
+    #         self._lines = None
+    #         return header
+    #     else:
+    #         return None
+
+    def line_index(self, line):
+        # search the lines in the column
+        # get the index of the line in its parent block
+        idx = line.parent.objects.index(line)
+        return line.parent, idx
+        # for block in self.blocks:
+        #     if contains_line(block, line):
+        #         index_in_block = block.lines.index(line)
+        #         return block,index_in_block
+
+    def line_after_index(self,from_line, spacing=10):
+        # the top of the next line
+        # should be roughly the same
+        # as the bottom of the line.
+        hits = [line for line in self.lines
+                if line.top >= from_line.bottom
+                and line.top <= from_line.bottom + spacing]
+
+        # breakpoint()
+
+        if hits:
+            next_line = hits[0]
+        else:
+            next_line = self.lines[-1]
+
+        next_line_parent = next_line.parent
+        idx = next_line_parent.objects.index(next_line)
+        return next_line_parent, idx
+    
+class ColumnOld:
     def __init__(self, blocks, side=None, number=None):
         self.blocks = blocks
         self.side = side
@@ -724,7 +829,7 @@ class Block(Span):
     
 
 
-class Par(Block):
+class Par(Span):
     def __str__(self):
         p = '\n'
         for o in self.objects:

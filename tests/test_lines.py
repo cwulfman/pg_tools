@@ -43,4 +43,7 @@ def test_columns():
     p.repair_fused_lines()
 
     left_column = p.left_column_new()
-    breakpoint()
+    right_column = p.right_column_new()
+
+    assert len(left_column.lines) == 46
+    assert len(right_column.lines) == 45
