@@ -80,7 +80,7 @@ class Page(Span):
 
 
     @property
-    def running_head(self):
+    def running_head_old(self):
         p = re.compile(r"\D+")
         txt = ''
         for linenum in range(0,4):
@@ -88,6 +88,12 @@ class Page(Span):
             if hits:
                 txt += ' '.join([hit for hit in hits])
         return txt
+
+    @property
+    def running_head(self):
+        ptop = self.print_region.top
+        header_line_height = 35
+        return [line for line in self.lines if line.top == ptop and line.height <= header_line_height]
 
 
     @property
@@ -208,9 +214,32 @@ class Page(Span):
         return guts
         
 
-    def detect_title(self):
-        return [line for line in self.lines[3:-20]
-                 if line.bbox.is_horizontally_centered_within(self.print_region, 100)]
+    def detect_title_lines(self, start:int=3, end:int=-20):
+        centered_lines = [line for line in self.lines[start:end]
+                 if line.bbox.is_horizontally_centered_within(self.print_region, 100)
+                 and str(line).strip().isupper()]
+        return [line for line in centered_lines if line not in self.running_head]
+
+    def cluster_lines(self, lines):
+        clusters = []
+        cluster = []
+
+        for i in range(0, len(lines) - 1):
+            cluster.append(lines[i])
+            spacing = lines[i+1].top - lines[i].bottom
+            # look for double spacing
+            if spacing > (lines[i].height * 2):
+                clusters.append(cluster)
+                cluster = []
+        return clusters
+
+
+    @property
+    def titles(self):
+        title_lines = self.detect_title_lines()
+        if title_lines:
+            return self.cluster_lines(title_lines)
+
 
     @property
     def has_columns(self):

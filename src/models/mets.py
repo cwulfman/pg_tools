@@ -161,7 +161,10 @@ class MetsVolume(Mets):
         if self._xml is None:
             self._xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
             self._xml += '<text>\n'
-            for page in self.pages:
+            for page in self._pages:
                 self._xml += f"\n{page.text}"
             self._xml += "\n</text>"
         return self._xml
+
+
+    

@@ -3,7 +3,7 @@ from pathlib import Path
 from lxml import etree
 from models.mets import MetsVolume, MetsPage
 from nlp.page import Page, BlankPage
-import nlp
+
 
 def fix_entities(xml_string:str) -> str:
     # Remove XML declaration to avoid ValueError
@@ -50,15 +50,14 @@ class PgVolume:
             self._pages[page_num] = self.loader.load_page(page_num)
         return self._pages[page_num]
 
-
-    def page_old(self, page_num):
-        if self._pages.get(page_num) is None:
-            mets_page = self.metsvol.page(page_num)
-            nlp_page = self.loader.load_page(mets_page.coordOCR_file, page_num)
-            # nlp_page.analyze()
-            # nlp_page.repair_fused_lines()
-            self._pages[page_num] = Page(mets_page, nlp_page)
-        return self._pages[page_num]
+    def chapter_starts(self):
+        starts = {}
+        for i in self.metsvol.page_index:
+            mets_page = self.metsvol.page(i)
+            if 'CHAPTER_START' in mets_page.tags:
+                starts[i] = self.page(i)
+        return starts
+            
 
 
 class PgPage:
@@ -75,6 +74,10 @@ class PgPage:
     @property
     def physical_order(self):
         return self._mets_page.physical_order
+
+    @property
+    def tags(self):
+        return self._mets_page.tags
 
     @property
     def column_numbers(self):
@@ -107,4 +110,7 @@ class PgPage:
 volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
 vol = PgVolume(volpath)
 
-p = vol.page(71)
+
+p71 = vol.page(71)._nlp_page
+p97 = vol.page(97)._nlp_page
+
