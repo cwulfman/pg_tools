@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:93b7298c5bbd9c4824688c91c5f4a63cd5be30680e32a8455d820ef921eb9b3e"
+content_hash = "sha256:157f27b37a29e9c4a07c0971e87dd6faf6085dec8137cd29a8153d91653fa9b9"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
@@ -142,6 +142,15 @@ files = [
 ]
 
 [[package]]
+name = "nodeenv"
+version = "1.9.1"
+summary = ""
+files = [
+    {file = "nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9"},
+    {file = "nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f"},
+]
+
+[[package]]
 name = "packaging"
 version = "24.2"
 summary = ""
@@ -166,6 +175,19 @@ summary = ""
 files = [
     {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
     {file = "pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1"},
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.404"
+summary = ""
+dependencies = [
+    "nodeenv",
+    "typing-extensions",
+]
+files = [
+    {file = "pyright-1.1.404-py3-none-any.whl", hash = "sha256:c7b7ff1fdb7219c643079e4c3e7d4125f0dafcc19d253b47e898d130ea426419"},
+    {file = "pyright-1.1.404.tar.gz", hash = "sha256:455e881a558ca6be9ecca0b30ce08aa78343ecc031d37a198ffa9a7a1abeb63e"},
 ]
 
 [[package]]
