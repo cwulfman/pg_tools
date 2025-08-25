@@ -57,6 +57,32 @@ class PgVolume:
             if 'CHAPTER_START' in mets_page.tags:
                 starts[i] = self.page(i)
         return starts
+
+    # def chapter_titles(self):
+    #     chapter_starts = self.chapter_starts()
+    #     data = {}
+    #     for k,page in chapter_starts.items():
+    #         entry = {"page" : k, "titles" : []}
+    #         titles = page._nlp_page.titles
+    #         if titles:
+    #             for title in titles:
+    #                 entry['titles'].append(str(title))
+    #         data[k] = entry
+    #     return data
+
+    def chapter_titles(self):
+        chapter_starts = self.chapter_starts()
+        title_info = {}
+        for k,page in chapter_starts.items():
+            titles = page._nlp_page.titles
+            metadata = { "titles" : titles, "page_num" : k }
+            if cnums := page.column_numbers:
+                metadata["left_column"] =  cnums['left']
+                metadata["right_column"] =  cnums['right']
+            title_info[k] = metadata
+        return title_info
+        
+        
             
 
 
@@ -114,3 +140,11 @@ vol = PgVolume(volpath)
 p71 = vol.page(71)._nlp_page
 p97 = vol.page(97)._nlp_page
 
+volpath2 = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007877465')
+vol2 = PgVolume(volpath2)
+
+
+p41 = vol2.page(41)._nlp_page
+p119 = vol2.page(119)._nlp_page
+
+ctitles = vol2.chapter_titles()

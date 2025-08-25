@@ -215,30 +215,70 @@ class Page(Span):
         
 
     def detect_title_lines(self, start:int=3, end:int=-20):
-        centered_lines = [line for line in self.lines[start:end]
+        # centered_lines = [line for line in self.lines[start:end]
+        centered_lines = [line for line in self.lines
                  if line.bbox.is_horizontally_centered_within(self.print_region, 100)
                  and str(line).strip().isupper()]
         return [line for line in centered_lines if line not in self.running_head]
 
-    def cluster_lines(self, lines):
+    def cluster_lines(self, lines) -> list:
+        clusters = []
+        cluster = []
+        prev_line = []
+        
+        for i,line in enumerate(lines):
+            if len(cluster) == 0:
+                cluster.append(line)
+            else:
+                current_line = line
+                prev_line = cluster[-1]
+                spacing = current_line.top - prev_line.bottom
+                if spacing < current_line.height * 2:
+                    cluster.append(current_line)
+                else:
+                    cluster.append(current_line)
+                    clusters.append(cluster)
+                    cluster = []
+        return clusters
+
+            
+                
+
+    
+    def cluster_lines_old(self, lines) -> list:
         clusters = []
         cluster = []
 
-        for i in range(0, len(lines) - 1):
-            cluster.append(lines[i])
-            spacing = lines[i+1].top - lines[i].bottom
-            # look for double spacing
-            if spacing > (lines[i].height * 2):
-                clusters.append(cluster)
-                cluster = []
+        if len(lines) == 1:
+            clusters.append(lines)
+        else:
+            for i in range(0, len(lines)):
+                cluster.append(lines[i])
+                if i == len(lines):
+                    clusters.append(cluster)
+                    break
+                else:
+                    spacing = lines[i+1].top - lines[i].bottom
+                    # look for double spacing
+                    if spacing > (lines[i].height * 2):
+                        clusters.append(cluster)
+                        cluster = []
+
+        clusters.append(cluster)
         return clusters
 
+    
 
     @property
     def titles(self):
+        title_strings = []
         title_lines = self.detect_title_lines()
         if title_lines:
-            return self.cluster_lines(title_lines)
+            title_clusters = self.cluster_lines(title_lines)
+            if len(title_clusters) > 0:
+                for cluster in title_clusters:
+                        title_strings.append(' '.join([str(line).strip() for line in cluster]))
+        return title_strings
 
 
     @property
