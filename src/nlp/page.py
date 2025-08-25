@@ -1,6 +1,6 @@
 import re
 from lxml import etree
-from nlp.utils import ns
+from nlp.utils import ns, percent_greek
 from nlp.span import Span
 from nlp.token import Token
 from nlp.bbox import BBox
@@ -181,9 +181,17 @@ class Page(Span):
         sorted_lines = sorted(self.lines, key=lambda line: line.top)
         idx = sorted_lines.index(fused_line)
         sorted_lines[idx].parent.replace(fused_line, lefty)
-        next_line = sorted_lines[idx+2]
-        next_idx = next_line.parent.index(next_line)
-        next_line.parent.insert(next_idx, righty)
+        try:
+            next_line = sorted_lines[idx+2]
+            next_idx = next_line.parent.index(next_line)
+            next_line.parent.insert(next_idx, righty)
+
+        except IndexError:
+            # the fused line is the last line;
+            # just insert the right line after the left
+            sorted_lines[idx].parent.append(righty)
+
+
 
     def repair_fused_lines(self):
         for line in self.fused_lines:
@@ -199,6 +207,10 @@ class Page(Span):
                 guts.append(adjacents[1].left - adjacents[0].right)
         return guts
         
+
+    def detect_title(self):
+        return [line for line in self.lines[3:-20]
+                 if line.bbox.is_horizontally_centered_within(self.print_region, 100)]
 
     @property
     def has_columns(self):
