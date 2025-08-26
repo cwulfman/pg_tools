@@ -10,7 +10,7 @@ p:Page = vol.page(71)._nlp_page
 p.repair_fused_lines()
 
 # compare old columns and new columns
-l,r = p.columns()
+l,r = p.columns
 
 
 # assert len(l.lines) == len(lnew.lines)

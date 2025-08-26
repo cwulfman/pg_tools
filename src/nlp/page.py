@@ -91,7 +91,7 @@ class Page(Span):
 
     def aligned_right(self, line, tolerance=10):
         return abs(self.print_region.right - line.right) <= tolerance
-    
+
     def left_lines(self, tolerance=30):
         return [line for line in self.lines
                 if self.aligned_left(line, tolerance=tolerance)]
@@ -100,16 +100,19 @@ class Page(Span):
         return [line for line in self.lines
                 if self.aligned_right(line, tolerance=tolerance)]
 
+    @property
     def left_column(self):
         lines = self.left_lines(tolerance=50)
         return Column(lines, 'left', self.column_numbers.get('left'))
 
+    @property
     def right_column(self):
         lines = self.right_lines(tolerance=50)
         return Column(lines, 'right', self.column_numbers.get('right'))
 
+    @property
     def columns(self):
-        return self.left_column(), self.right_column()
+        return self.left_column, self.right_column
 
     
     @property
