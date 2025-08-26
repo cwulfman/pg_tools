@@ -58,18 +58,6 @@ class PgVolume:
                 starts[i] = self.page(i)
         return starts
 
-    # def chapter_titles(self):
-    #     chapter_starts = self.chapter_starts()
-    #     data = {}
-    #     for k,page in chapter_starts.items():
-    #         entry = {"page" : k, "titles" : []}
-    #         titles = page._nlp_page.titles
-    #         if titles:
-    #             for title in titles:
-    #                 entry['titles'].append(str(title))
-    #         data[k] = entry
-    #     return data
-
     def chapter_titles(self):
         chapter_starts = self.chapter_starts()
         title_info = {}

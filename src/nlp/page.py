@@ -80,35 +80,11 @@ class Page(Span):
 
 
     @property
-    def running_head_old(self):
-        p = re.compile(r"\D+")
-        txt = ''
-        for linenum in range(0,4):
-            hits = p.findall(str(self.lines[linenum]).strip())
-            if hits:
-                txt += ' '.join([hit for hit in hits])
-        return txt
-
-    @property
     def running_head(self):
         ptop = self.print_region.top
         header_line_height = 35
         return [line for line in self.lines if line.top == ptop and line.height <= header_line_height]
 
-
-    @property
-    def left_column(self):
-        left_blocks = self.lines_aligned_left(self.midline / 2)
-        # drop the first line; it is the header
-        # return left_lines[1:]
-        return Column(left_blocks, 'left', self.column_numbers.get('left'))
-
-    # def left_lines(self, left_pad=20):
-    #     l1 = self.left + self.margin_left
-    #     l2 = l1 + left_pad
-    #     return [line for line in self.lines
-    #             if line.left >= l1
-    #             and line.left < l2]
 
     def aligned_left(self, line, tolerance=20):
         return line.left - self.print_region.left <= tolerance
@@ -124,35 +100,16 @@ class Page(Span):
         return [line for line in self.lines
                 if self.aligned_right(line, tolerance=tolerance)]
 
-    def left_column_new(self):
+    def left_column(self):
         lines = self.left_lines(tolerance=50)
         return Column(lines, 'left', self.column_numbers.get('left'))
 
-    def right_column_new(self):
+    def right_column(self):
         lines = self.right_lines(tolerance=50)
         return Column(lines, 'right', self.column_numbers.get('right'))
 
-    def columns_new(self):
-        return self.left_column_new(), self.right_column_new()
-
     def columns(self):
-        left_column = []
-        right_column = []
-        left_lines = self.left_lines()
-        left_column = sorted(left_lines, key=lambda x: x.top)
-        for left_line in left_column:
-            adjacents = self.lines_adjacent(left_line)
-            if len(adjacents) == 2:
-                right_line = [line for line in adjacents
-                              if line != left_line][0]
-                right_column.append(right_line)
-                
-        return Column(left_column, 'left'), Column(right_column, 'right')
-        
-    
-    @property
-    def right_column(self):
-        return Column([block for block in self.blocks if abs(block.left - self.midline) <= 300], 'right', self.column_numbers.get('right'))
+        return self.left_column(), self.right_column()
 
     
     @property
@@ -242,33 +199,6 @@ class Page(Span):
         return clusters
 
             
-                
-
-    
-    def cluster_lines_old(self, lines) -> list:
-        clusters = []
-        cluster = []
-
-        if len(lines) == 1:
-            clusters.append(lines)
-        else:
-            for i in range(0, len(lines)):
-                cluster.append(lines[i])
-                if i == len(lines):
-                    clusters.append(cluster)
-                    break
-                else:
-                    spacing = lines[i+1].top - lines[i].bottom
-                    # look for double spacing
-                    if spacing > (lines[i].height * 2):
-                        clusters.append(cluster)
-                        cluster = []
-
-        clusters.append(cluster)
-        return clusters
-
-    
-
     @property
     def titles(self):
         title_strings = []
@@ -284,8 +214,6 @@ class Page(Span):
     @property
     def has_columns(self):
         pass
-
-    
 
     def analyze(self):
         pass
