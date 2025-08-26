@@ -204,14 +204,31 @@ class Page(Span):
             
     @property
     def titles(self):
+        detected_lines = self.detect_title_lines()
+        if detected_lines:
+            names = self.names_in_titles
+            return [line for line in detected_lines if not line in names]
+        else:
+            return None
+
+    @property
+    def title_strings(self):
         title_strings = []
-        title_lines = self.detect_title_lines()
-        if title_lines:
+        detected_lines = self.detect_title_lines()
+        if detected_lines:
+            names = self.names_in_titles
+            title_lines = [line for line in detected_lines if not line in names]
             title_clusters = self.cluster_lines(title_lines)
             if len(title_clusters) > 0:
                 for cluster in title_clusters:
                         title_strings.append(' '.join([str(line).strip() for line in cluster]))
         return title_strings
+
+    @property
+    def names_in_titles(self):
+        title_lines = self.detect_title_lines()
+        return [line for line in title_lines if line.style.size > 10 and 'bold' in line.style.weight and str(line).isupper()]
+        
 
 
     @property

@@ -11,7 +11,3 @@ p.repair_fused_lines()
 
 # compare old columns and new columns
 l,r = p.columns
-
-
-# assert len(l.lines) == len(lnew.lines)
-# assert len(r.lines) == len(rnew.lines)

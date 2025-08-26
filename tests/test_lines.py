@@ -40,8 +40,8 @@ def test_columns():
     p = vol.page(71)._nlp_page
     p.repair_fused_lines()
 
-    left_column = p.left_column_new()
-    right_column = p.right_column_new()
+    left_column = p.left_column
+    right_column = p.right_column
 
     assert len(left_column.lines) == 46
     assert len(right_column.lines) == 45

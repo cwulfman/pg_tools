@@ -1,11 +1,16 @@
 from lxml import etree
 from nlp.bbox import BBox
+from nlp.style import Style
 
 class LayoutObject:
     def __init__(self, element:etree.Element):
         bbox_string = element.get('title').split(';')[0].split(' ')[1:]
         values = [int(v) for v in bbox_string]
         self.bbox = BBox(*values)
+        self._style = {}
+        style_string = element.get('style')
+        if style_string:
+            self._style = Style(style_string)
         self.parent:LayoutObject | None = None
         self.type:str = element.get('class')
 
@@ -50,4 +55,12 @@ class LayoutObject:
             return self.parent
         else:
             return self.parent.parent_block
-    
+
+    @property
+    def style(self):
+        if self._style:
+            return self._style
+        elif self.parent:
+            return self.parent.style
+        else:
+            return {}

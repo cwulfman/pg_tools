@@ -76,6 +76,7 @@ class PgVolume:
         txt += "<works>\n"
         for k,page in chapter_starts.items():
             titles = page._nlp_page.titles
+            names = page._nlp_page.names_in_titles
             start = None
             if page.column_numbers:
                 start = page.column_numbers.get('left')
@@ -83,8 +84,10 @@ class PgVolume:
             txt += f"<work volume='{volume}' "
             txt += f"start='{start}'"
             txt += ">\n"
+            for name in names:
+                txt += f"<name>{str(name).strip()}</name>\n"
             for title in titles:
-                txt += f"<title>{title}</title>\n"
+                txt += f"<title>{str(title).strip()}</title>\n"
             txt += "</work>\n"
         txt += "</works>"
         return txt
@@ -156,3 +159,4 @@ p41 = vol2.page(41)._nlp_page
 p119 = vol2.page(119)._nlp_page
 
 ctitles = vol2.chapter_titles()
+works = vol2.works_xml()
