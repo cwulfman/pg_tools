@@ -116,6 +116,7 @@ class MetsVolume(Mets):
     def __init__(self, directory:Path):
         self.directory = directory
         self.mets = etree.parse(list(self.directory.glob("*.xml"))[0])
+        self.id = self.mets.xpath("../mets:mets/@OBJID", namespaces=namespaces)
         self.filepaths:dict = {}
         self.fileuses:dict = {}
         for f in list(self.mets.xpath(".//mets:fileSec//mets:file", namespaces=namespaces)):

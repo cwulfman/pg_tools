@@ -81,6 +81,26 @@ class PgVolume:
                 metadata["right_column"] =  cnums['right']
             title_info[k] = metadata
         return title_info
+
+    def works_xml(self):
+        chapter_starts = self.chapter_starts()
+        txt = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        txt += "<works>\n"
+        for k,page in chapter_starts.items():
+            titles = page._nlp_page.titles
+            start = None
+            if page.column_numbers:
+                start = page.column_numbers.get('left')
+            volume = self.metsvol.id[0]
+            txt += f"<work volume='{volume}' "
+            txt += f"start='{start}'"
+            txt += ">\n"
+            for title in titles:
+                txt += f"<title>{title}</title>\n"
+            txt += "</work>\n"
+        txt += "</works>"
+        return txt
+        
         
         
             
