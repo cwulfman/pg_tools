@@ -170,21 +170,23 @@ class PgPage:
             if greek_column := self._nlp_page.greek_column:
                 f.write("<column ")
                 if greek_column.side == 'left':
-                    f.write(f"n - '{self._mets_page.logical_order}'")
-                else:
+                    f.write(f"n = '{self._mets_page.logical_order}'")
+                elif greek_column.side == 'right':
                     f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
-                    f.write(">\n")
+                else:
+                    pass
+                f.write(">\n")
                 f.write(str(greek_column))
-                f.write("</column>\n")
+                f.write("\n</column>\n")
         else:
             if self._nlp_page.left_column:
-                f.write(f"<column n='{self._mets_page.logical_order}'")
+                f.write(f"<column n='{self._mets_page.logical_order}'>\n")
                 f.write(str(self._nlp_page.left_column))
-                f.write("</column>\n")
+                f.write("\n</column>\n")
             if self._nlp_page.right_column:
-                f.write(f"<column n='{int(self._mets_page.logical_order) + 1}'")
+                f.write(f"<column n='{int(self._mets_page.logical_order) + 1}'>\n")
                 f.write(str(self._nlp_page.right_column))
-                f.write("</column>\n")
+                f.write("\n></column>\n")
                 
         f.write("</page>\n")
 

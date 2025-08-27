@@ -11,7 +11,7 @@ class Line(Span):
         p = ''
         for o in self.objects:
             p = p + str(o)
-        p += '\n'
+        # p += '\n'
         return p
 
     def __repr__(self):
