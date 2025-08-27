@@ -1,8 +1,12 @@
-from copy import deepcopy
 from nlp.utils import percent_greek
 from nlp.span import Span
+from lxml import etree
 
 class Line(Span):
+    def __init__(self, element: etree.Element | None):
+        super().__init__(element)
+        self.type = 'ocr_line'
+
     def __str__(self):
         p = ''
         for o in self.objects:
@@ -43,14 +47,21 @@ class Line(Span):
 
 
     def split(self):
-        line_left = deepcopy(self)
-        line_right = deepcopy(self)
+        # line_left = deepcopy(self)
+        # line_right = deepcopy(self)
+        line_left = Line(None)
+        line_right = Line(None)
+
+        line_left.objects = self.objects.copy()
+        line_left.reset_bbox()
 
         mid = round(self.length / 2)
 
-        line_right.objects.clear()
+
         while line_left.length > mid:
-            line_right.prepend(line_left.pop())
+            tok = line_left.pop()
+            if tok:
+                line_right.prepend(tok)
 
         line_left.reset_bbox()
         line_right.reset_bbox()
@@ -61,14 +72,23 @@ class Line(Span):
         left,right = self.split()
         if self.starts_greek:
             while right.percent_greek > 0:
-                left.append(right.popleft())
-                while right.peekleft().is_punct:
-                    left.append(right.popleft())
+                tok = right.popleft()
+                if tok:
+                    left.append(tok)
+                while right.peekleft() and right.peekleft().is_punct:
+                    tok = right.popleft()
+                    if tok:
+                        left.append(tok)
+                        
         elif self.ends_greek:
             while left.percent_greek > 0:
-                right.prepend(left.pop())
-                while left.peek().is_punct:
-                    right.prepend(left.pop())
+                tok = left.pop()
+                if tok:
+                    right.prepend(tok)
+                    while left.peek() and left.peek().is_punct:
+                        tok = left.pop()
+                        if tok:
+                            right.prepend(tok)
         else:
             pass
 

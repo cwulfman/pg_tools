@@ -3,24 +3,26 @@ from nlp.bbox import BBox
 from nlp.style import Style
 
 class LayoutObject:
-    def __init__(self, element:etree.Element):
-        bbox_string = element.get('title').split(';')[0].split(' ')[1:]
-        values = [int(v) for v in bbox_string]
-        self.bbox = BBox(*values)
-        self._style = {}
-        style_string = element.get('style')
-        if style_string:
-            self._style = Style(style_string)
-        self.parent:LayoutObject | None = None
-        self.type:str = element.get('class')
+    def __init__(self, element:etree.Element | None):
+        self.bbox = BBox(0,0,0,0)
+        if element is not None:
+            bbox_string = element.get('title').split(';')[0].split(' ')[1:]
+            values = [int(v) for v in bbox_string]
+            self.bbox = BBox(*values)
+            self._style = {}
+            style_string = element.get('style')
+            if style_string:
+                self._style = Style(style_string)
+            self.parent:LayoutObject | None = None
+            self.type:str = element.get('class')
 
-    def reset_bbox(self):
-        if self.tokens:
-            x_min = self.tokens[0].left
-            y_min = self.tokens[0].top
-            x_max = self.tokens[-1].right
-            y_max = self.tokens[-1].bottom
-            self.bbox = BBox(x_min, y_min, x_max, y_max)
+    # def reset_bbox(self):
+    #     if self.tokens:
+    #         x_min = self.tokens[0].left
+    #         y_min = self.tokens[0].top
+    #         x_max = self.tokens[-1].right
+    #         y_max = self.tokens[-1].bottom
+    #         self.bbox = BBox(x_min, y_min, x_max, y_max)
 
 
     @property

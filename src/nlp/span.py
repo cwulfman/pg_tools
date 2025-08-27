@@ -8,14 +8,15 @@ from nlp.token import Token
 
 
 class Span(LayoutObject):
-    def __init__(self, element:etree.Element):
+    def __init__(self, element: etree.Element | None):
         super().__init__(element)
         self.objects:deque = deque()
-        children = [child for child in element if child.get('class') is not None]
-        for child in children:
-            object = genObject(child)
-            object.parent = self
-            self.objects.append(object)
+        if element is not None:
+            children = [child for child in element if child.get('class') is not None]
+            for child in children:
+                object = genObject(child)
+                object.parent = self
+                self.objects.append(object)
 
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
@@ -94,22 +95,26 @@ class Span(LayoutObject):
         self.reset_bbox()
 
     def pop(self):
-        object = self.objects.pop()
-        self.reset_bbox()
-        object.parent = None
-        return object
+        if len(self.objects) > 0:
+            object = self.objects.pop()
+            self.reset_bbox()
+            object.parent = None
+            return object
             
     def popleft(self):
-        object = self.objects.popleft()
-        self.reset_bbox()
-        object.parent = None
-        return object
+        if len(self.objects) > 0:
+            object = self.objects.popleft()
+            self.reset_bbox()
+            object.parent = None
+            return object
 
     def peek(self):
-        return self.objects[-1]
+        if len(self.objects) > 0:
+            return self.objects[-1]
 
     def peekleft(self):
-        return self.objects[0]
+        if len(self.objects) > 0:
+            return self.objects[0]
 
     def clear(self):
         self.objects.clear()
