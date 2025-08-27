@@ -100,7 +100,7 @@ class PgVolume:
         txt += "</works>"
         return txt
         
-    def serialize(self, filepath):
+    def serialize_old(self, filepath):
         with open(filepath, 'w+', encoding='utf-8') as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(f"<volume id='{self.barcode}'>\n")
@@ -109,12 +109,18 @@ class PgVolume:
                 page = self.page(pagenum)
                 page.serialize(f, greek_only=True)
                 print("done")
-            
-        
             f.write("</volume>")
         
-        
-        
+
+    def serialize(self, dir_path:Path):
+        for pagenum in self.page_list:
+            print(f"serializing page {pagenum}")
+            if page := self.page(pagenum):
+                file_path = Path(page.physical_order.zfill(3)).with_suffix('.xml')
+                full_path = dir_path / file_path
+                with full_path.open('w+', encoding='utf-8') as f:
+                    page.serialize(f, greek_only=True)
+                print(f"wrote {full_path}")
             
 
 
