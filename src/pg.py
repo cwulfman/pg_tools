@@ -50,6 +50,14 @@ class PgVolume:
             self._pages[page_num] = self.loader.load_page(page_num)
         return self._pages[page_num]
 
+    @property
+    def page_list(self):
+        return self.metsvol.page_list
+
+    @property
+    def barcode(self):
+        return self.metsvol.id[0]
+
     def chapter_starts(self):
         starts = {}
         for i in self.metsvol.page_index:
@@ -92,6 +100,19 @@ class PgVolume:
         txt += "</works>"
         return txt
         
+    def serialize(self, filepath):
+        with open(filepath, 'w+', encoding='utf-8') as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            f.write(f"<volume id='{self.barcode}'>\n")
+            for pagenum in self.page_list:
+                print(f"printing page {pagenum}")
+                page = self.page(pagenum)
+                page.serialize(f, greek_only=True)
+                print("done")
+            
+        
+            f.write("</volume>")
+        
         
         
             
@@ -132,16 +153,35 @@ class PgPage:
         return left_column, right_column
 
 
-    def serialize(self, greek_only=True):
+    def serialize(self, f, greek_only=True):
         self._nlp_page.repair_fused_lines()
-        txt = ''
-        txt += f"<pb n='{self.physical_order}' "
+        f.write(f"<page n='{self.physical_order}'")
         if self._nlp_page.running_head:
-            txt += f"ed='{self._nlp_page.running_head}' "
-        txt += "/>\n"
-        left_column, right_column = self._nlp_page.columns
+            head_txt = ' '.join(str(line) for line in self._nlp_page.running_head)
+            f.write(f"running_head='{head_txt.strip()}'")
+        f.write(">\n")
+        if greek_only:
+            if greek_column := self._nlp_page.greek_column:
+                f.write("<column ")
+                if greek_column.side == 'left':
+                    f.write(f"n - '{self._mets_page.logical_order}'")
+                else:
+                    f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
+                    f.write(">\n")
+                f.write(str(greek_column))
+                f.write("</column>\n")
+        else:
+            if self._nlp_page.left_column:
+                f.write(f"<column n='{self._mets_page.logical_order}'")
+                f.write(str(self._nlp_page.left_column))
+                f.write("</column>\n")
+            if self._nlp_page.right_column:
+                f.write(f"<column n='{int(self._mets_page.logical_order) + 1}'")
+                f.write(str(self._nlp_page.right_column))
+                f.write("</column>\n")
+                
+        f.write("</page>\n")
 
-        return txt
         
         
 volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')

@@ -132,6 +132,10 @@ class MetsVolume(Mets):
             pnum = page_div.get("ORDER")
             if pnum:
                 self.page_index[int(pnum)] = page_div
+
+    @property
+    def page_list(self):
+        return sorted(self.page_index.keys())
                 
 
 
