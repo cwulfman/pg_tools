@@ -10,9 +10,10 @@ from nlp.column import Column
 
 class Page(Span):
     def __init__(self, tree:etree.Element, number:int=0):
-        self.root = tree.xpath("//xhtml:div[@class='ocr_page']", namespaces=ns)[0]        
+        self.root = tree.xpath("//xhtml:div[@class='ocr_page']", namespaces=ns)[0]
         super().__init__(self.root)
         self.number = number
+        self.type = "page"
 
 
     def __str__(self):
@@ -28,19 +29,31 @@ class Page(Span):
 
     @property
     def margin_left(self):
-        return self.left + min([line.left for line in self.lines])
+        if self.lines:
+            return self.left + min([line.left for line in self.lines])
+        else:
+            return self.left
 
     @property
     def margin_right(self):
-        return self.right - max([line.right for line in self.lines])
+        if self.lines:
+            return self.right - max([line.right for line in self.lines])
+        else:
+            return self.right
 
     @property
     def margin_top(self):
-        return self.top + min([line.top for line in self.lines])
+        if self.lines:
+            return self.top + min([line.top for line in self.lines])
+        else:
+            return self.top
 
     @property
     def margin_bottom(self):
-        return self.bottom - max([line.bottom for line in self.lines])
+        if self.lines:
+            return self.bottom - max([line.bottom for line in self.lines])
+        else:
+            return self.bottom
 
     @property
     def print_region(self):
@@ -70,12 +83,13 @@ class Page(Span):
     def column_numbers(self):
         # p = re.compile(r'.*?(\d+).*^')
         col_nums = {}
-        nums_left = re.findall(r"\d+", str(self.lines[0]).strip())
-        nums_right = re.findall(r"\d+", str(self.lines[1]).strip())
-        if nums_left:
-            col_nums['left'] = nums_left[0]
-        if nums_right:
-            col_nums['right'] = nums_right[0]
+        if self.lines and len(self.lines) > 1:
+            nums_left = re.findall(r"\d+", str(self.lines[0]).strip())
+            nums_right = re.findall(r"\d+", str(self.lines[1]).strip())
+            if nums_left:
+                col_nums['left'] = nums_left[0]
+                if nums_right:
+                    col_nums['right'] = nums_right[0]
         return col_nums
 
 
@@ -149,13 +163,15 @@ class Page(Span):
         sorted_lines[idx].parent.replace(fused_line, lefty)
         try:
             next_line = sorted_lines[idx+2]
-            next_idx = next_line.parent.index(next_line)
-            next_line.parent.insert(next_idx, righty)
+            if next_line and next_line.parent:
+                next_idx = next_line.parent.index(next_line)
+                next_line.parent.insert(next_idx, righty)
 
         except IndexError:
             # the fused line is the last line;
             # just insert the right line after the left
-            sorted_lines[idx].parent.append(righty)
+            if sorted_lines[idx].parent:
+                sorted_lines[idx].parent.append(righty)
 
 
 
@@ -186,7 +202,7 @@ class Page(Span):
         cluster = []
         prev_line = []
         
-        for i,line in enumerate(lines):
+        for _,line in enumerate(lines):
             if len(cluster) == 0:
                 cluster.append(line)
             else:
@@ -241,8 +257,10 @@ class Page(Span):
 
 
 class BlankPage(Page):
-    def __init__(self, tree:etree.Element, number:int=0):
-        super().__init__(tree)
+    def __init__(self, tree:etree.Element| None, number:int=0):
+        if tree:
+            super().__init__(tree, number)
+        self.type = "blank"
 
     # stunt all relevant properties and methods
 
@@ -271,6 +289,10 @@ class BlankPage(Page):
         return BBox(0,0,0,0)
 
     def lines_adjacent(self, a_line):
+        return None
+
+    @property
+    def lines(self):
         return None
 
     @property
@@ -326,5 +348,3 @@ class BlankPage(Page):
     @property
     def has_columns(self):
         return False
-
-

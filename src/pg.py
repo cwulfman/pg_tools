@@ -1,8 +1,15 @@
+import logging
 import re
 from pathlib import Path
 from lxml import etree
 from models.mets import MetsVolume, MetsPage
 from nlp.page import Page, BlankPage
+from nlp.utils import ns
+
+
+
+# Configure basic logging to the console
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def fix_entities(xml_string:str) -> str:
@@ -13,6 +20,12 @@ def fix_entities(xml_string:str) -> str:
     xml_string = xml_string.replace("&quot;", "\u0022")
     return xml_string
 
+def new_page(tree:etree.Element):
+    root = tree.xpath("//xhtml:div[@class='ocr_page']", namespaces=ns)[0]
+    children = [child for child in root if child.get('class') is not None]
+    if children:
+        return 
+
 class Loader:
     def __init__(self, volpath):
         self.volpath = volpath
@@ -21,20 +34,28 @@ class Loader:
     def load_page(self, page_num):
         mets_page:MetsPage = self.metsvol.page(page_num)
         coordOCR_file = self.load_page_file(mets_page.coordOCR_file)
-        exception_tags = ['BLANK', 'FRONT_COVER', 'BACK_COVER']
-        if any([tag for tag in exception_tags if tag in mets_page.tags]):
-            nlp_page = BlankPage(coordOCR_file, page_num)
-        else:
-            nlp_page = Page(coordOCR_file, page_num)
-        return PgPage(mets_page, nlp_page)
+        if coordOCR_file:
+            exception_tags = ['BLANK', 'FRONT_COVER', 'BACK_COVER', "IMAGE_ON_PAGE"]
+            if any([tag for tag in exception_tags if tag in mets_page.tags]):
+                nlp_page = BlankPage(coordOCR_file, page_num)
+            else:
+                root = coordOCR_file.xpath("//xhtml:div[@class='ocr_page']", namespaces=ns)[0]
+                children = [child for child in root if child.get('class') is not None]
+                if len(children) > 0:
+                    nlp_page = Page(coordOCR_file, page_num)
+                else:
+                    nlp_page = BlankPage(coordOCR_file, page_num)
+
+            return PgPage(mets_page, nlp_page)
 
 
     def load_page_file(self,page_file:Path):
         with page_file.open('r') as pf:
             raw_data = pf.read()
             clean_data = fix_entities(raw_data)
-            tree = etree.fromstring(clean_data)
-        return tree
+            if clean_data:
+                tree = etree.fromstring(clean_data)
+                return tree
 
 
 
@@ -49,7 +70,7 @@ class PgVolume:
         if self._pages.get(page_num) is None:
             self._pages[page_num] = self.loader.load_page(page_num)
         return self._pages[page_num]
-
+    
     @property
     def page_list(self):
         return self.metsvol.page_list
@@ -100,27 +121,20 @@ class PgVolume:
         txt += "</works>"
         return txt
         
-    def serialize_old(self, filepath):
-        with open(filepath, 'w+', encoding='utf-8') as f:
-            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-            f.write(f"<volume id='{self.barcode}'>\n")
-            for pagenum in self.page_list:
-                print(f"printing page {pagenum}")
-                page = self.page(pagenum)
-                page.serialize(f, greek_only=True)
-                print("done")
-            f.write("</volume>")
-        
 
     def serialize(self, dir_path:Path):
         for pagenum in self.page_list:
-            print(f"serializing page {pagenum}")
-            if page := self.page(pagenum):
+            page = self.page(pagenum)
+            if page and page.type != 'blank':
                 file_path = Path(page.physical_order.zfill(3)).with_suffix('.xml')
                 full_path = dir_path / file_path
-                with full_path.open('w+', encoding='utf-8') as f:
-                    page.serialize(f, greek_only=True)
-                print(f"wrote {full_path}")
+                if full_path.is_file():
+                    logging.info(f"{full_path} already exists; skipping")
+                else:
+                    logging.info(f"serializing page {pagenum}")
+                    with full_path.open('w+', encoding='utf-8') as f:
+                        page.serialize(f, greek_only=True)
+
             
 
 
@@ -134,6 +148,10 @@ class PgPage:
             return f"<Page {self.physical_order} [{self.column_numbers['left']}-{self.column_numbers['right']}]>"
         else:
             return f"<Page {self.physical_order}>"
+
+    @property
+    def type(self):
+        return self._nlp_page.type
 
     @property
     def physical_order(self):
@@ -169,21 +187,24 @@ class PgPage:
         if greek_only:
             if greek_column := self._nlp_page.greek_column:
                 f.write("<column ")
-                if greek_column.side == 'left':
+                if greek_column.side == 'left' and self._mets_page.logical_order:
                     f.write(f"n = '{self._mets_page.logical_order}'")
-                elif greek_column.side == 'right':
-                    f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
+                elif greek_column.side == 'right' and self._mets_page.logical_order:
+                    try:
+                        f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
+                    except ValueError:
+                        pass
                 else:
                     pass
                 f.write(">\n")
                 f.write(str(greek_column))
                 f.write("\n</column>\n")
         else:
-            if self._nlp_page.left_column:
+            if self._nlp_page.left_column and self._mets_page.logical_order:
                 f.write(f"<column n='{self._mets_page.logical_order}'>\n")
                 f.write(str(self._nlp_page.left_column))
                 f.write("\n</column>\n")
-            if self._nlp_page.right_column:
+            if self._nlp_page.right_column and self._mets_page.logical_order:
                 f.write(f"<column n='{int(self._mets_page.logical_order) + 1}'>\n")
                 f.write(str(self._nlp_page.right_column))
                 f.write("\n></column>\n")
@@ -192,19 +213,19 @@ class PgPage:
 
         
         
-volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
-vol = PgVolume(volpath)
+# volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
+# vol = PgVolume(volpath)
 
 
-p71 = vol.page(71)._nlp_page
-p97 = vol.page(97)._nlp_page
+# p71 = vol.page(71)._nlp_page
+# p97 = vol.page(97)._nlp_page
 
-volpath2 = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007877465')
-vol2 = PgVolume(volpath2)
+# volpath2 = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007877465')
+# vol2 = PgVolume(volpath2)
 
 
-p41 = vol2.page(41)._nlp_page
-p119 = vol2.page(119)._nlp_page
+# p41 = vol2.page(41)._nlp_page
+# p119 = vol2.page(119)._nlp_page
 
-ctitles = vol2.chapter_titles()
-works = vol2.works_xml()
+# ctitles = vol2.chapter_titles()
+# works = vol2.works_xml()

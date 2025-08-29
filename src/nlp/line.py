@@ -5,6 +5,8 @@ from lxml import etree
 class Line(Span):
     def __init__(self, element: etree.Element | None):
         super().__init__(element)
+        if element is None:
+            self.parent = None
         self.type = 'ocr_line'
 
     def __str__(self):
