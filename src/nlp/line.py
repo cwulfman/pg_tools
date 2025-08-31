@@ -49,8 +49,6 @@ class Line(Span):
 
 
     def split(self):
-        # line_left = deepcopy(self)
-        # line_right = deepcopy(self)
         line_left = Line(None)
         line_right = Line(None)
 

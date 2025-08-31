@@ -34,7 +34,7 @@ class Loader:
     def load_page(self, page_num):
         mets_page:MetsPage = self.metsvol.page(page_num)
         coordOCR_file = self.load_page_file(mets_page.coordOCR_file)
-        if coordOCR_file:
+        if coordOCR_file is not None:
             exception_tags = ['BLANK', 'FRONT_COVER', 'BACK_COVER', "IMAGE_ON_PAGE"]
             if any([tag for tag in exception_tags if tag in mets_page.tags]):
                 nlp_page = BlankPage(coordOCR_file, page_num)
@@ -185,11 +185,11 @@ class PgPage:
             f.write(f"running_head='{head_txt.strip()}'")
         f.write(">\n")
         if greek_only:
-            if greek_column := self._nlp_page.greek_column:
+            for column in self._nlp_page.greek_columns:
                 f.write("<column ")
-                if greek_column.side == 'left' and self._mets_page.logical_order:
+                if column.side == 'left' and self._mets_page.logical_order:
                     f.write(f"n = '{self._mets_page.logical_order}'")
-                elif greek_column.side == 'right' and self._mets_page.logical_order:
+                elif column.side == 'right' and self._mets_page.logical_order:
                     try:
                         f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
                     except ValueError:
@@ -197,7 +197,7 @@ class PgPage:
                 else:
                     pass
                 f.write(">\n")
-                f.write(str(greek_column))
+                f.write(str(column))
                 f.write("\n</column>\n")
         else:
             if self._nlp_page.left_column and self._mets_page.logical_order:
@@ -229,3 +229,8 @@ class PgPage:
 
 # ctitles = vol2.chapter_titles()
 # works = vol2.works_xml()
+
+
+volpath = Path("/Users/wulfmanc/Desktop/patrologia_graeca/32101077772786")
+vol = PgVolume(volpath)
+

@@ -25,6 +25,42 @@ class Page(Span):
 
     @property
     def midline(self):
+        if self.print_region is not None:
+            return self.print_region.width / 2
+        else:
+           return self.width / 2
+
+    def group_lines_by_baseline(self, tolerance = 10):
+        if not self.lines:
+            return []
+        groups = []
+        sorted_lines = sorted(self.lines, key=lambda x: x.bottom)
+        current_group = [sorted_lines[0]]
+        current_baseline = sorted_lines[0].bottom
+        for line in sorted_lines[1:]:
+            if abs(line.bottom - current_baseline) < tolerance:
+                current_group.append(line)
+            else:
+                groups.append(current_group)
+                current_group = [line]
+                current_baseline = line.bottom
+        return groups
+                
+    def group_lines_into_columns(self):
+        groups = self.group_lines_by_baseline(tolerance=35)
+        left_column = []
+        right_column = []
+        for g in groups:
+            for line in g:
+                if line.left < self.midline:
+                    left_column.append(line)
+                else:
+                    right_column.append(line)
+        return [left_column, right_column]
+        
+
+    @property
+    def midline_old(self):
         return self.width / 2
 
     @property
@@ -138,6 +174,20 @@ class Page(Span):
             right_column = self.right_column
             if right_column and percent_greek(right_column.tokens) > .5:
                 return right_column
+            
+    # some pages have two columns in Greek
+    @property
+    def greek_columns(self):
+        columns = []
+        left_column = self.left_column
+        if left_column and percent_greek(left_column.tokens) > .5:
+            columns.append(left_column)
+
+        right_column = self.right_column
+        if right_column and percent_greek(right_column.tokens) > .5:
+            columns.append(right_column)
+
+        return columns
             
 
     @property
@@ -253,7 +303,16 @@ class Page(Span):
 
     def analyze(self):
         pass
-    
+
+
+    def display(self):
+        groups = self.group_lines_by_baseline(tolerance=35)
+        for g in groups:
+            for line in g:
+                if line.left < self.midline:
+                    print(line)
+                else:
+                    print(f"\t\t\t\t\t\t\t{line}")
 
 
 class BlankPage(Page):
@@ -329,7 +388,12 @@ class BlankPage(Page):
 
     @property
     def greek_column(self):
+
         return None
+
+    @property
+    def greek_columns(self):
+        return []
 
     @property
     def fused_lines(self):
