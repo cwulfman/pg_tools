@@ -317,7 +317,7 @@ class Page(Span):
 
 class BlankPage(Page):
     def __init__(self, tree:etree.Element| None, number:int=0):
-        if tree:
+        if tree is not None:
             super().__init__(tree, number)
         self.type = "blank"
 

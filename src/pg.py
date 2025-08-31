@@ -1,3 +1,4 @@
+import io
 import logging
 import re
 from pathlib import Path
@@ -64,6 +65,7 @@ class PgVolume:
         self.metsvol = MetsVolume(volpath)
         self.loader = Loader(volpath)
         self._pages = {}
+        self._xml = None
 
 
     def page(self, page_num):
@@ -120,21 +122,25 @@ class PgVolume:
             txt += "</work>\n"
         txt += "</works>"
         return txt
+
+    
+    def xml(self, greek_only=True) -> str:
+        if self._xml is None:
+            with io.StringIO() as buffer:
+                for pagenum in self.page_list:
+                    page = self.page(pagenum)
+                    page_buffer = page.xml(greek_only = greek_only)
+                    buffer.write(page_buffer)
+                self._xml = buffer.getvalue()
+        return self._xml
+
+
         
 
-    def serialize(self, dir_path:Path):
-        for pagenum in self.page_list:
-            page = self.page(pagenum)
-            if page and page.type != 'blank':
-                file_path = Path(page.physical_order.zfill(3)).with_suffix('.xml')
-                full_path = dir_path / file_path
-                if full_path.is_file():
-                    logging.info(f"{full_path} already exists; skipping")
-                else:
-                    logging.info(f"serializing page {pagenum}")
-                    with full_path.open('w+', encoding='utf-8') as f:
-                        page.serialize(f, greek_only=True)
-
+    def serialize(self, dir_path:Path, greek_only=True):
+        file_path = (dir_path / self.barcode).with_suffix(".xml")
+        with open(file_path, 'w+', encoding="utf-8") as f:
+            f.write(self.xml(greek_only=greek_only))
             
 
 
@@ -142,6 +148,7 @@ class PgPage:
     def __init__(self, mets_page, nlp_page):
         self._mets_page = mets_page
         self._nlp_page = nlp_page
+        
 
     def __repr__(self):
         if self.column_numbers:
@@ -177,39 +184,46 @@ class PgPage:
         return left_column, right_column
 
 
-    def serialize(self, f, greek_only=True):
+    def xml(self, greek_only=True):
         self._nlp_page.repair_fused_lines()
-        f.write(f"<page n='{self.physical_order}'")
-        if self._nlp_page.running_head:
-            head_txt = ' '.join(str(line) for line in self._nlp_page.running_head)
-            f.write(f"running_head='{head_txt.strip()}'")
-        f.write(">\n")
-        if greek_only:
-            for column in self._nlp_page.greek_columns:
-                f.write("<column ")
-                if column.side == 'left' and self._mets_page.logical_order:
-                    f.write(f"n = '{self._mets_page.logical_order}'")
-                elif column.side == 'right' and self._mets_page.logical_order:
-                    try:
-                        f.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
-                    except ValueError:
+        with io.StringIO() as buffer:
+            buffer.write(f"<page n='{self.physical_order}'")
+            if self._nlp_page.running_head:
+                head_txt = ' '.join(str(line) for line in self._nlp_page.running_head)
+                buffer.write(f"running_head='{head_txt.strip()}'")
+            buffer.write(">\n")
+            if greek_only:
+                for column in self._nlp_page.greek_columns:
+                    buffer.write("<column ")
+                    if column.side == 'left' and self._mets_page.logical_order:
+                        buffer.write(f"n = '{self._mets_page.logical_order}'")
+                    elif column.side == 'right' and self._mets_page.logical_order:
+                        try:
+                            buffer.write(f"n= '{str(int(self._mets_page.logical_order) + 1)}'")
+                        except ValueError:
+                            pass
+                    else:
                         pass
-                else:
-                    pass
-                f.write(">\n")
-                f.write(str(column))
-                f.write("\n</column>\n")
-        else:
-            if self._nlp_page.left_column and self._mets_page.logical_order:
-                f.write(f"<column n='{self._mets_page.logical_order}'>\n")
-                f.write(str(self._nlp_page.left_column))
-                f.write("\n</column>\n")
-            if self._nlp_page.right_column and self._mets_page.logical_order:
-                f.write(f"<column n='{int(self._mets_page.logical_order) + 1}'>\n")
-                f.write(str(self._nlp_page.right_column))
-                f.write("\n></column>\n")
+                    buffer.write(">\n")
+                    buffer.write(str(column))
+                    buffer.write("\n</column>\n")
+            else:
+                if self._nlp_page.left_column and self._mets_page.logical_order:
+                    buffer.write(f"<column n='{self._mets_page.logical_order}'>\n")
+                    buffer.write(str(self._nlp_page.left_column))
+                    buffer.write("\n</column>\n")
+                if self._nlp_page.right_column and self._mets_page.logical_order:
+                    buffer.write(f"<column n='{int(self._mets_page.logical_order) + 1}'>\n")
+                    buffer.write(str(self._nlp_page.right_column))
+                    buffer.write("\n></column>\n")
                 
-        f.write("</page>\n")
+            buffer.write("</page>\n")
+            content = buffer.getvalue()
+        return content
+
+
+    def serialize(self, f, greek_only=True):
+        f.write(self.xml(greek_only=greek_only))
 
         
         
