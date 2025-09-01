@@ -19,14 +19,15 @@ class Transformer():
         self.outdir = Path(outdir)
 
     def transform_volume(self, barcode):
-        if self.outdir:
+        file_path = (self.outdir / barcode).with_suffix(".xml")
+        if file_path.is_file():
+            logging.info(f"{file_path} already exists")
+        else:
             logging.info(f"transforming volume {barcode}")
             vol_indir = self.indir / barcode
             volume = pg.PgVolume(vol_indir)
             volume.serialize(self.outdir)
             logging.info(f"finished transforming volume {barcode}")
-        else:
-            logging.error("no output directory to write to")
 
 
     def transform_all_volumes(self):

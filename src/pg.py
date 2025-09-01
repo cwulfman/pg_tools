@@ -129,9 +129,9 @@ class PgVolume:
             with io.StringIO() as buffer:
                 buffer.write(f"<volume n='{self.barcode}'>\n")
                 for pagenum in self.page_list:
-                    page = self.page(pagenum)
-                    page_buffer = page.xml(greek_only = greek_only)
-                    buffer.write(page_buffer)
+                    if page := self.page(pagenum):
+                        page_buffer = page.xml(greek_only = greek_only)
+                        buffer.write(page_buffer)
                 buffer.write("</volume>\n")
                 self._xml = buffer.getvalue()
         return self._xml
