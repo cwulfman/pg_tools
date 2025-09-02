@@ -1,3 +1,4 @@
+import io
 import re
 from lxml import etree
 from nlp.utils import ns, percent_greek
@@ -313,6 +314,33 @@ class Page(Span):
                     print(line)
                 else:
                     print(f"\t\t\t\t\t\t\t{line}")
+
+
+    def xml(self, greek_only=True):
+        self.repair_fused_lines()
+        with io.StringIO() as buffer:
+            buffer.write(f"<page n='{self.number}' ")
+            if self.running_head:
+                head_txt = ' '.join(str(line) for line in self.running_head)
+                buffer.write(f"running_head='{head_txt.strip()}'")
+            buffer.write(">\n")
+            if greek_only is True:
+                columns = self.greek_columns
+            else:
+                columns = self.columns
+
+            if columns:
+                for column in columns:
+                    buffer.write(f"<column n='{column.number}' side='{column.side}'>")
+                    buffer.write(str(column))
+                    buffer.write("\n</column>\n")
+
+            buffer.write("</page>\n")
+            content = buffer.getvalue()
+        return content
+            
+
+        
 
 
 class BlankPage(Page):
