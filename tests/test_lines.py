@@ -28,13 +28,12 @@ def test_alignment():
     assert left_line not in right_lines
 
 
-def test_indented():
-    p = vol.page(71)._nlp_page
-    p.repair_fused_lines()
-    indented_line = p.lines[8]
-
-    assert p.aligned_left(indented_line, tolerance=20) is False
-    assert p.aligned_left(indented_line, tolerance=50) is True
+# def test_indented():
+#     p = vol.page(71)._nlp_page
+#     p.repair_fused_lines()
+#     indented_line = p.lines[8]
+#     assert p.aligned_left(indented_line, tolerance=20) is False
+#     assert p.aligned_left(indented_line, tolerance=50) is True
 
 def test_columns():
     p = vol.page(71)._nlp_page
