@@ -17,6 +17,7 @@ class Span(LayoutObject):
                 object = genObject(child)
                 object.parent = self
                 self.objects.append(object)
+            self.reset_bbox()
 
     def __repr__(self):
         return f"<{self.type} len={len(self.objects)}>"
@@ -32,17 +33,16 @@ class Span(LayoutObject):
         return len(self.objects)
     
 
-
     def reset_bbox(self):
         if len(self.objects) == 0:
-            self.bbox = BBox(0,0,0,0)
+            self._bbox = BBox(0,0,0,0)
         elif len(self.objects) == 1:
             obj = self.objects[0]
-            self.bbox = copy(obj.bbox)
+            self._bbox = copy(obj.bbox)
         else:
             first = self.objects[0]
             last = self.objects[-1]
-            self.bbox = BBox(first.left, first.top, last.right, last.bottom)
+            self._bbox = BBox(first.left, first.top, last.right, last.bottom)
             
     
 

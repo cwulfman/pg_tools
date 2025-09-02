@@ -1,5 +1,6 @@
 from nlp.utils import percent_greek
 from nlp.span import Span
+from nlp.bbox import BBox
 from lxml import etree
 
 class Line(Span):
@@ -15,6 +16,7 @@ class Line(Span):
             p = p + str(o)
         # p += '\n'
         return p
+
 
     def __repr__(self):
         txt = ''

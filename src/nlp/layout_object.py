@@ -4,11 +4,17 @@ from nlp.style import Style
 
 class LayoutObject:
     def __init__(self, element:etree.Element | None):
-        self.bbox = BBox(0,0,0,0)
+        self._bbox = BBox(0,0,0,0)
         if element is not None:
-            bbox_string = element.get('title').split(';')[0].split(' ')[1:]
+            if element.get('title'):
+                bbox_string = element.get('title').split(';')[0].split(' ')[1:]
+            elif element.get('class') == 'ocrx_word' and element.get('data-coords'):
+                bbox_string = element.get('data-coords').split(' ')
+            else:
+                bbox_string = ['0', '0', '0', '0']
+
             values = [int(v) for v in bbox_string]
-            self.bbox = BBox(*values)
+            self._bbox = BBox(*values)
             self._style = {}
             style_string = element.get('style')
             if style_string:
@@ -16,14 +22,10 @@ class LayoutObject:
             self.parent:LayoutObject | None = None
             self.type:str = element.get('class')
 
-    # def reset_bbox(self):
-    #     if self.tokens:
-    #         x_min = self.tokens[0].left
-    #         y_min = self.tokens[0].top
-    #         x_max = self.tokens[-1].right
-    #         y_max = self.tokens[-1].bottom
-    #         self.bbox = BBox(x_min, y_min, x_max, y_max)
 
+    @property
+    def bbox(self):
+        return self._bbox
 
     @property
     def top(self):
