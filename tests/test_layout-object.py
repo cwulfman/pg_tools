@@ -28,5 +28,4 @@ def test_non_hocr_word():
 def test_non_hocr_line():
     object = Line(non_hocr_line)
     expected_bbox = BBox(199, 920, 990, 960)
-
     assert object.bbox == expected_bbox
