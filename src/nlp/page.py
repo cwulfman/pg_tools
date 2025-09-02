@@ -60,9 +60,6 @@ class Page(Span):
         return [left_column, right_column]
         
 
-    @property
-    def midline_old(self):
-        return self.width / 2
 
     @property
     def margin_left(self):
