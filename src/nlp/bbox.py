@@ -74,8 +74,6 @@ class BBox:
 
 
 
-
-
     def is_aligned_left(self, other, tolerance:int=0):
         return abs(self.left - other.left) <= tolerance
 
@@ -96,10 +94,10 @@ class BBox:
         return other.left - self.right <= tolerance
 
     def is_above(self, other, tolerance=0):
-        self.bottom - other.top <= tolerance
+        return self.bottom - other.top <= tolerance
     
     def is_below(self, other, tolerance=0):
-        other.bottom - self.top <= tolerance
+        return other.bottom - self.top <= tolerance
     
 
     def is_adjacent_right(self, other, side, tolerance:int=0):
