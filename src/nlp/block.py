@@ -8,11 +8,9 @@ class Block(Span):
 
 
     def __str__(self):
-        # block = '<ab>'
         block = ''
         for o in self.objects:
             block += str(o)
-        # block += '</ab>\n'
         return block
     
 

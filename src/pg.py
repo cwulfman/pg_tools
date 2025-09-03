@@ -226,27 +226,3 @@ class PgPage:
 
     def serialize(self, f, greek_only=True):
         f.write(self.xml(greek_only=greek_only))
-
-        
-        
-# volpath = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007506148')
-# vol = PgVolume(volpath)
-
-
-# p71 = vol.page(71)._nlp_page
-# p97 = vol.page(97)._nlp_page
-
-# volpath2 = Path('/Users/wulfmanc/odrive/princeton/Patrologia_Graeca/32101007877465')
-# vol2 = PgVolume(volpath2)
-
-
-# p41 = vol2.page(41)._nlp_page
-# p119 = vol2.page(119)._nlp_page
-
-# ctitles = vol2.chapter_titles()
-# works = vol2.works_xml()
-
-
-volpath = Path("/Users/wulfmanc/Desktop/patrologia_graeca/32101077772786")
-vol = PgVolume(volpath)
-

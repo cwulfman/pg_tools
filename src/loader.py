@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 from lxml import etree
 import nlp
+from nlp.page import Page
 import logging
 
 
@@ -23,7 +24,7 @@ def fix_entities(xml_string:str) -> str:
 class Loader:
     def __init__(self, voldir:Path):
         self.dir = Path(voldir)
-        self.pages: dict[int,nlp.Page]  = dict()
+        self.pages: dict[int,Page]  = dict()
 
     def load_page(self, page_file:Path, page_number):
         # tree = etree.parse(page_file)
@@ -34,7 +35,7 @@ class Loader:
         tree = etree.fromstring(clean_data)
         try:
             page_element =  tree.xpath("//xhtml:div[@class = 'ocr_page']", namespaces=ns)[0]
-            return nlp.Page(page_element, page_number)
+            return Page(page_element, page_number)
         except IndexError as e:
             logging.error(f"{e} file had no ocr_page element")
 
@@ -44,10 +45,11 @@ class Loader:
         for page_file in self.dir.glob("*.html"):
             page_number = int(page_file.stem)
             page_object = self.load_page(page_file, page_number)
-            self.pages[int(page_file.stem)] = page_object
+            if page_object:
+                self.pages[int(page_file.stem)] = page_object
 
     def reload(self):
-        self.pages: dict[int,nlp.Page]  = dict()
+        self.pages: dict[int,Page]  = dict()
         self.load()
 
     def serialize(self, voldir:Path):

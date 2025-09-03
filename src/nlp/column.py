@@ -21,16 +21,6 @@ class Column:
         coltext += '\n'.join([str(line) for line in self.lines])
         return coltext
 
-    # def __str__(self):
-    #     coltext =''
-    #     if self.number and self.number.isdigit():
-    #         coltext += f"<cb n='{self.number}' />\n"
-    #     else:
-    #         coltext += "<cb/>\n"
-
-    #     coltext += '\n'.join([str(line) for line in self.lines])
-    #     return coltext
-
     @property
     def tokens(self) -> list[Token] | None:
         if self.lines is None:

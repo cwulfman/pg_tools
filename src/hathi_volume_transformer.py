@@ -18,28 +18,29 @@ class Transformer():
         self.indir = Path(indir)
         self.outdir = Path(outdir)
 
-    def transform_volume(self, barcode):
+    def transform_volume(self, epub):
+        barcode = Path(epub).stem
         file_path = (self.outdir / barcode).with_suffix(".xml")
+
         if file_path.is_file():
             logging.info(f"{file_path} already exists")
         else:
             logging.info(f"transforming volume {barcode}")
-            vol_indir = self.indir / barcode
-            volume = pg.PgVolume(vol_indir)
-            volume.serialize(self.outdir)
+            volume = EPubVolume(epub)
+            volume.serialize(self.outdir, greek_only=True)
             logging.info(f"finished transforming volume {barcode}")
 
 
     def transform_all_volumes(self):
-        barcoded_directories = [x for x in self.indir.iterdir() if x.is_dir()]
-        barcodes = [d.stem for d in barcoded_directories]
-        volume_count = len(barcodes)
-        logging.info(f"processing {volume_count} volumes")
-        logging.info(f"starting to process {len(barcoded_directories)}")
-        for i,barcode in enumerate(barcodes):
-            logging.info(f"processing volume {i}: barcode={barcode}")
-            self.transform_volume(barcode)
-            logging.info(f"done processing volume {i}")
+        epubs = [x for x in Path(self.indir).iterdir() if x.is_file()]
+        if epubs:
+            volume_count = len(epubs)
+            logging.info(f"processing {volume_count} volumes")
+            logging.info(f"starting to process {len(epubs)}")
+            for i,epub in enumerate(epubs):
+                logging.info(f"processing volume {i}: id={Path(epub).stem}")
+                self.transform_volume(epub)
+                logging.info(f"done processing volume {i}")
 
 
 def main():
@@ -59,4 +60,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
